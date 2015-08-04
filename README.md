@@ -2,6 +2,17 @@
 
 Steps to get v23 running in Go directly on mobile, and reproduce v23 bugs.
 
+The procedure below puts code in the two directories
+
+```
+ ~/pumpkin
+ ~/mutantfortune
+```
+
+Feel free to change the names in the commands below.
+The directories can be deleted afterwards.
+Goal is to be able to try this without messing up your home dir.
+
 ## Install android-sdk-linux
 
 See the [instructions](https://developer.android.com/sdk/index.html).
