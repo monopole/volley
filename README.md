@@ -71,7 +71,7 @@ GOPATH=~/mutantfortune:~/pumpkin go install ${gitmf}/server
 
 ## Test the basic fortune app (no mobile involved)
 
-Check the mount table to confirm there is NO service named croupier
+Check the mount table to confirm there is NO service named `croupier`
 ```
 $V_BIN/namespace --v23.namespace.root '/104.197.96.113:3389' glob -l '*'
 ```
@@ -84,7 +84,7 @@ $V_TUT/bin/server &
 TUT_PID_SERVER=$!
 ```
 
-Check again - this time the output should include ‘croupier’
+Check again - this time the output should include `croupier`
 ```
 $V_BIN/namespace --v23.namespace.root '/104.197.96.113:3389' glob -l '*'
 ```
@@ -94,7 +94,7 @@ Use the client to obtain a fortune.  It finds the service via the public mount t
 $V_TUT/bin/client
 ```
 
-Kill the service, and confirm that ‘croupier’ no longer in the table.
+Kill the service, and confirm that `croupier` no longer in the table.
 ```
 kill $TUT_PID_SERVER
 
@@ -103,7 +103,7 @@ $V_BIN/namespace --v23.namespace.root '/104.197.96.113:3389' glob -l '*'
 
 ## Now try the mobile app
 
-Use this to install an app called ‘croupier’, which will NOT do networking
+Use this to install an app called `croupier`, which will NOT do networking
 
 ```
 GOPATH=~/mutantfortune:~/pumpkin $V_BIN/gomobile install ${gitmf}/croupier
@@ -113,6 +113,12 @@ Run it to see the purple triangle - a trivial change from
 https://godoc.org/golang.org/x/mobile/example/basic
 
 Now edit the file and change `doGl := false` to true, reinstall, and
-see the program fail and generate the appropriate noise on ‘adb
-logcat’
+see the program fail.
+
+Look for `GoLog` in the output of
+
+```
+adb logcat > log.txt
+```
+
 
