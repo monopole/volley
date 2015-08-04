@@ -71,9 +71,17 @@ export V_TUT=~/mutantfortune
 /bin/rm -rf ~/mutantfortune
 
 gitmf=github.com/monopole/mutantfortune
+```
 
+The following will complain about _No buildable Go source_ - no worries.
+```
 GOPATH=~/mutantfortune go get -d ${gitmf}
+```
 
+Now generate the Go that was missing and build the v23 fortune server
+and client stuff.
+
+```
 VDLROOT=$V23_RELEASE/src/v.io/v23/vdlroot VDLPATH=$V_TUT/src \
   $V_BIN/vdl generate --lang go $V_TUT/src/${gitmf}/ifc
 
@@ -105,7 +113,8 @@ Check again - this time the output should include `croupier`
 $V_BIN/namespace --v23.namespace.root '/104.197.96.113:3389' glob -l '*'
 ```
 
-Use the client to obtain a fortune.  It finds the service via the public mount table.
+Use the client to obtain a fortune.
+It finds the service via the public mount table.
 ```
 $V_TUT/bin/client
 ```
@@ -119,7 +128,10 @@ $V_BIN/namespace --v23.namespace.root '/104.197.96.113:3389' glob -l '*'
 
 ## Now try the mobile app
 
-Use this to install an app called `croupier`, which will NOT do networking
+Plug your dev phone into a USB port.
+
+Use the following to install an app called `croupier`, which will NOT
+do networking
 
 ```
 GOPATH=~/mutantfortune:~/pumpkin $V_BIN/gomobile install ${gitmf}/croupier
