@@ -4,15 +4,18 @@ Steps to get v23 running in Go directly on mobile, and reproduce v23 bugs.
 
 ## Install android-sdk-linux
 
-See [https://developer.android.com/sdk/index.html]
+See the [instructions](https://developer.android.com/sdk/index.html).
+
 You'll need `adb`
 
 
 ## Install go 1.5 beta
 
-See [http://golang.org/doc/install/source]
+See the [instructions](http://golang.org/doc/install/source).
 
 ## Install the go mobile stuff
+
+Using `pumpkin` arbitrarily.  Use whatever you want.
 
 ```
 unset GOROOT
@@ -39,7 +42,8 @@ go install v.io/x/ref/services/agent/...
 go install v.io/x/ref/services/mounttable/...
 ```
 
-Otherwise follow the full instructions: [https://v.io/installation/details.html]
+Otherwise follow the full
+[instructions](https://v.io/installation/details.html).
 
 ## Install the fortune client and server
 
@@ -50,15 +54,18 @@ export V_TUT=~/mutantfortune
 
 /bin/rm -rf ~/mutantfortune
 
-GOPATH=~/mutantfortune go get -d github.com/monopole/mutantfortune
+gitmf=github.com/monopole/mutantfortune
 
-VDLROOT=$V23_RELEASE/src/v.io/v23/vdlroot VDLPATH=$V_TUT/src $V_BIN/vdl generate --lang go $V_TUT/src/github.com/monopole/mutantfortune/ifc
+GOPATH=~/mutantfortune go get -d ${gitmf}
 
-GOPATH=~/mutantfortune:~/pumpkin go build github.com/monopole/mutantfortune/ifc
+VDLROOT=$V23_RELEASE/src/v.io/v23/vdlroot VDLPATH=$V_TUT/src \
+  $V_BIN/vdl generate --lang go $V_TUT/src/${gitmf}/ifc
 
-GOPATH=~/mutantfortune:~/pumpkin go install github.com/monopole/mutantfortune/client
+GOPATH=~/mutantfortune:~/pumpkin go build ${gitmf}/ifc
 
-GOPATH=~/mutantfortune:~/pumpkin go install github.com/monopole/mutantfortune/server
+GOPATH=~/mutantfortune:~/pumpkin go install ${gitmf}/client
+
+GOPATH=~/mutantfortune:~/pumpkin go install ${gitmf}/server
 ```
 
 
@@ -69,7 +76,9 @@ Check the mount table to confirm there is NO service named croupier
 $V_BIN/namespace --v23.namespace.root '/104.197.96.113:3389' glob -l '*'
 ```
 
-Start the service - it will load itself into the public mount table at 104.blah.blah
+Start the service - it is hardcoded to load itself into the public
+mount table at 104.blah.blah:blah (from above)
+
 ```
 $V_TUT/bin/server &
 TUT_PID_SERVER=$!
@@ -97,7 +106,7 @@ $V_BIN/namespace --v23.namespace.root '/104.197.96.113:3389' glob -l '*'
 Use this to install an app called ‘croupier’, which will NOT do networking
 
 ```
-GOPATH=~/mutantfortune:~/pumpkin $V_BIN/gomobile install github.com/monopole/mutantfortune/croupier
+GOPATH=~/mutantfortune:~/pumpkin $V_BIN/gomobile install ${gitmf}/croupier
 ```
 
 Run it to see the purple triangle - a trivial change from
