@@ -10,8 +10,13 @@ The procedure below puts code in the two directories
 ```
 
 Feel free to change the names in the commands below.
+
 The directories can be deleted afterwards.
-Goal is to be able to try this without messing up your home dir.
+
+Goal is to just hack something together without messing up existing
+installs, and clean it up in a proper repo once things seem to be
+on the right track.
+
 
 ## Install android-sdk-linux
 
@@ -35,7 +40,7 @@ unset GOPATH
 mkdir ~/pumpkin
 
 GOPATH=~/pumpkin go get golang.org/x/mobile/cmd/gomobile
-$GOPATH/bin/gomobile init
+GOPATH=~/pumpkin ~/pumpkin/bin/gomobile init
 ```
 
 ## Install v23 as an end-user
@@ -47,10 +52,10 @@ __Because of permission failures, you may have to repeat these incantations a fe
 
 
 ```
-go get -d v.io/x/ref/...
-go install v.io/x/ref/cmd/...
-go install v.io/x/ref/services/agent/...
-go install v.io/x/ref/services/mounttable/...
+GOPATH=~/pumpkin go get -d v.io/x/ref/...
+GOPATH=~/pumpkin go install v.io/x/ref/cmd/...
+GOPATH=~/pumpkin go install v.io/x/ref/services/agent/...
+GOPATH=~/pumpkin go install v.io/x/ref/services/mounttable/...
 ```
 
 Otherwise follow the full
