@@ -145,7 +145,7 @@ GOPATH=~/mutantfortune:~/pumpkin $V_BIN/gomobile install ${gitmf}/croupier
 Run it to see the purple triangle - a trivial change from
 https://godoc.org/golang.org/x/mobile/example/basic
 
-Now edit the file and change `doGl := false` to true, reinstall, and
+Now edit the file and change `doV23 := false` to true, reinstall, and
 see the program fail.
 
 Look for `GoLog` in the output of

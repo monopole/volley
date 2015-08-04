@@ -22,12 +22,9 @@ import (
 	"golang.org/x/mobile/exp/app/debug"
 	"golang.org/x/mobile/exp/f32"
 	"golang.org/x/mobile/exp/gl/glutil"
-	"golang.org/x/mobile/geom"
 	"golang.org/x/mobile/gl"
 	"log"
 	"v.io/v23"
-	"v.io/v23/context"
-	"v.io/x/ref/lib/signals"
 	_ "v.io/x/ref/runtime/factories/generic"
 )
 
@@ -38,19 +35,19 @@ var (
 	color    gl.Uniform
 	buf      gl.Buffer
 
-	grey     float32
-	red      float32
-	green    float32
-	blue     float32
-	touchLoc geom.Point
+	green float32
+	grey  float32
+	red   float32
+	blue  float32
+
+	touchX float32
+	touchY float32
 )
 
 func main() {
 	app.Main(func(a app.App) {
-
-		var ctx *context.T
-		doGl := false
-		if doGl {
+		doV23 := true
+		if doV23 {
 			ctx, shutdown := v23.Init()
 			defer shutdown()
 
@@ -75,8 +72,6 @@ func main() {
 
 		var c config.Event
 		for e := range a.Events() {
-			log.Printf("Got an event: %v\n", e)
-
 			switch e := app.Filter(e).(type) {
 			case lifecycle.Event:
 				switch e.Crosses(lifecycle.StageVisible) {
@@ -87,18 +82,20 @@ func main() {
 				}
 			case config.Event:
 				c = e
-				touchLoc = geom.Point{c.WidthPt / 2, c.HeightPt / 2}
+				touchX = float32(c.WidthPx / 2)
+				touchY = float32(c.HeightPx / 2)
 			case paint.Event:
 				onPaint(c)
 				a.EndPaint(e)
 			case touch.Event:
-				touchLoc = e.Loc
+				touchX = e.X
+				touchY = e.Y
 			}
 		}
 
-		log.Printf("Here be some cheese.\n")
+		// Normal means to end v23 services:
+		// <-signals.ShutdownOnSignals(ctx)
 
-		<-signals.ShutdownOnSignals(ctx)
 	})
 }
 
@@ -128,23 +125,18 @@ func onStop() {
 }
 
 func onPaint(c config.Event) {
-	grey = 0.4
-	gl.ClearColor(grey, grey, grey, 1)
+	gl.ClearColor(1, 0, 0, 1)
 	gl.Clear(gl.COLOR_BUFFER_BIT)
 
 	gl.UseProgram(program)
 
-	red += 0.01
-	if red > 1 {
-		red = 0
+	green += 0.01
+	if green > 1 {
+		green = 0
 	}
-	blue += 0.01
-	if blue > 1 {
-		blue = 0
-	}
-	gl.Uniform4f(color, red, green, blue, 1)
+	gl.Uniform4f(color, 0, green, 0, 1)
 
-	gl.Uniform2f(offset, float32(touchLoc.X/c.WidthPt), float32(touchLoc.Y/c.HeightPt))
+	gl.Uniform2f(offset, touchX/float32(c.WidthPx), touchY/float32(c.HeightPx))
 
 	gl.BindBuffer(gl.ARRAY_BUFFER, buf)
 	gl.EnableVertexAttribArray(position)
@@ -168,7 +160,6 @@ const (
 
 const vertexShader = `#version 100
 uniform vec2 offset;
-
 attribute vec4 position;
 void main() {
 	// offset comes in with x/y values between 0 and 1.
