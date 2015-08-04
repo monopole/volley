@@ -47,7 +47,7 @@ mkdir ~/pumpkin
 Installing as an end-user is easier than installing as a
 [contributor](https://v.io/community/contributing.html).
 
-__Because of gerrit permission failures, one may have to repeat these
+__Because of code mirror server failures, one may have to repeat these
 incantations a few times.__
 
 
