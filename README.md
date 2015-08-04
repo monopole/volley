@@ -29,26 +29,26 @@ You'll need `adb`
 
 See the [instructions](http://golang.org/doc/install/source).
 
-## Install the go mobile stuff
+## Clear your environment
 
-Using `pumpkin` arbitrarily.  Use whatever you want.
+Using `pumpkin` and `mutantfortune` arbitrarily.  Use whatever you want.
 
 ```
 unset GOROOT
 unset GOPATH
 /bin/rm -rf ~/pumpkin
-mkdir ~/pumpkin
+/bin/rm -rf ~/mutantfortune
 
-GOPATH=~/pumpkin go get golang.org/x/mobile/cmd/gomobile
-GOPATH=~/pumpkin ~/pumpkin/bin/gomobile init
+mkdir ~/pumpkin
 ```
 
 ## Install v23 as an end-user
 
-...as opposed to the more complex install for a contributor.
+Installing as an end-user is easier than installing as a
+[contributor](https://v.io/community/contributing.html).
 
-
-__Because of permission failures, you may have to repeat these incantations a few times.__
+__Because of gerrit permission failures, one may have to repeat these
+incantations a few times.__
 
 
 ```
@@ -61,14 +61,19 @@ GOPATH=~/pumpkin go install v.io/x/ref/services/mounttable/...
 Otherwise follow the full
 [instructions](https://v.io/installation/details.html).
 
+
+## Install the go mobile stuff
+
+```
+GOPATH=~/pumpkin go get golang.org/x/mobile/cmd/gomobile
+GOPATH=~/pumpkin ~/pumpkin/bin/gomobile init
+```
+
 ## Install the fortune client and server
 
 ```
-export V23_RELEASE=~/pumpkin
-export V_BIN=$V23_RELEASE/bin
+export V_BIN=~/pumpkin/bin
 export V_TUT=~/mutantfortune
-
-/bin/rm -rf ~/mutantfortune
 
 gitmf=github.com/monopole/mutantfortune
 ```
@@ -82,7 +87,7 @@ Now generate the Go that was missing and build the v23 fortune server
 and client stuff.
 
 ```
-VDLROOT=$V23_RELEASE/src/v.io/v23/vdlroot VDLPATH=$V_TUT/src \
+VDLROOT=~/pumpkin/src/v.io/v23/vdlroot VDLPATH=$V_TUT/src \
   $V_BIN/vdl generate --lang go $V_TUT/src/${gitmf}/ifc
 
 GOPATH=~/mutantfortune:~/pumpkin go build ${gitmf}/ifc
