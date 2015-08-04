@@ -6,15 +6,19 @@ license that can be found in the LICENSE file.
 -->
 <manifest
 	xmlns:android="http://schemas.android.com/apk/res/android"
-	package="v.io.examples.croupier"
+	package="io.v.go.examples.croupier"
 	android:versionCode="1"
 	android:versionName="1.0">
 
-	<uses-sdk android:minSdkVersion="9" />
+	<uses-sdk android:minSdkVersion="19" android:targetSdkVersion="19" />
 
 	<!-- http://developer.android.com/guide/topics/manifest/manifest-intro.html#perms -->
-	<uses-permission android:name="android.permission.INTERNET" />
-
+  <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+  <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+  <uses-permission android:name="android.permission.INTERNET"/>
+  <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+  <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    
 	<application android:label="croupier" android:debuggable="true">
 
 	<activity android:name="org.golang.app.GoNativeActivity"
