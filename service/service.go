@@ -1,8 +1,8 @@
 package service
 
 import (
+	"github.com/monopole/mutantfortune/ifc"
 	"math/rand"
-	"mutantfortune/ifc"
 	"sync"
 	"v.io/v23/context"
 	"v.io/v23/rpc"

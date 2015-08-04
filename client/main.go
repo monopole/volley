@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"mutantfortune/ifc"
+	"github.com/monopole/mutantfortune/ifc"
 
 	"v.io/v23"
 	"v.io/v23/context"

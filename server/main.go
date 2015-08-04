@@ -1,10 +1,10 @@
 package main
 
 import (
+	"github.com/monopole/mutantfortune/ifc"
+	"github.com/monopole/mutantfortune/server/util"
+	"github.com/monopole/mutantfortune/service"
 	"log"
-	"mutantfortune/ifc"
-	"mutantfortune/server/util"
-	"mutantfortune/service"
 	"v.io/v23"
 	"v.io/x/ref/lib/signals"
 	_ "v.io/x/ref/runtime/factories/generic"
