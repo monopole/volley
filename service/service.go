@@ -9,14 +9,16 @@ import (
 )
 
 type impl struct {
-	wisdom []string     // All known fortunes.
-	random *rand.Rand   // To pick a random index in 'wisdom'.
-	mu     sync.RWMutex // To safely enable concurrent use.
+	cardOwner int32
+	wisdom    []string     // All known fortunes.
+	random    *rand.Rand   // To pick a random index in 'wisdom'.
+	mu        sync.RWMutex // To safely enable concurrent use.
 }
 
 // Makes an implementation.
 func Make() ifc.FortuneServerMethods {
 	return &impl{
+		cardOwner: 0,
 		wisdom: []string{
 			"You will reach the heights of success.",
 			"Conquer your fears or they will conquer you.",
@@ -35,9 +37,22 @@ func (f *impl) Get(_ *context.T, _ rpc.ServerCall) (blah string, err error) {
 	return f.wisdom[f.random.Intn(len(f.wisdom))], nil
 }
 
+func (f *impl) WhoHasCard(_ *context.T, _ rpc.ServerCall) (who int32, err error) {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
+	return f.cardOwner, nil
+}
+
 func (f *impl) Add(_ *context.T, _ rpc.ServerCall, blah string) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.wisdom = append(f.wisdom, blah)
+	return nil
+}
+
+func (f *impl) SendCardTo(_ *context.T, _ rpc.ServerCall, who int32) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.cardOwner = who
 	return nil
 }

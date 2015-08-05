@@ -5,4 +5,6 @@ type Fortune interface {
   Get() (wisdom string | error)
   // Adds a fortune to the set used by Get().
   Add(wisdom string) error
+  WhoHasCard() (who int32 | error)
+  SendCardTo(who int32) error
 }

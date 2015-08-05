@@ -11,9 +11,7 @@ package main
 
 import (
 	"encoding/binary"
-	"github.com/monopole/mutantfortune/ifc"
-	"github.com/monopole/mutantfortune/server/util"
-	"github.com/monopole/mutantfortune/service"
+	croupierUtil "github.com/monopole/mutantfortune/croupier/util"
 	"golang.org/x/mobile/app"
 	"golang.org/x/mobile/event/config"
 	"golang.org/x/mobile/event/lifecycle"
@@ -25,6 +23,7 @@ import (
 	"golang.org/x/mobile/gl"
 	"log"
 	"v.io/v23"
+	"v.io/x/ref/lib/signals"
 	_ "v.io/x/ref/runtime/factories/generic"
 )
 
@@ -35,43 +34,43 @@ var (
 	color    gl.Uniform
 	buf      gl.Buffer
 
+	gray float32
+
 	green float32
-	grey  float32
 	red   float32
 	blue  float32
 
 	touchX float32
 	touchY float32
+
+	iHaveTheCard bool
 )
 
 func main() {
 	app.Main(func(a app.App) {
-		doV23 := true
-		if doV23 {
-			ctx, shutdown := v23.Init()
-			defer shutdown()
 
-			// v23.GetNamespace(ctx).SetRoots("/monopole2.mtv.corp.google.com:23000")
-			v23.GetNamespace(ctx).SetRoots("/104.197.96.113:3389")
-			// A generic server.
-			s := util.MakeServer(ctx)
+		ctx, shutdown := v23.Init()
+		defer shutdown()
 
-			// Attach the 'fortune service' implementation
-			// defined above to a queriable, textual description
-			// of the implementation used for service discovery.
-			fortune := ifc.FortuneServer(service.Make())
+		gm := croupierUtil.NewGameManager(ctx)
 
-			err := s.Serve(
-				"croupier", fortune, util.MakeAuthorizer())
-			if err != nil {
-				log.Panic("Error serving service: ", err)
-			}
-		}
+		// The server initializes with player '0' holding the card.
+		iHaveTheCard = gm.MyNumber() == 0
 
 		log.Printf("Hi there.\n")
 
+		red = 0.4
+		green = 0.4
+		blue = 0.4
+
 		var c config.Event
+		pollCounter := 0
 		for e := range a.Events() {
+			pollCounter++
+			if pollCounter == 30 { // 60 ~= one second
+				iHaveTheCard = gm.MyNumber() == gm.WhoHasTheCard()
+				pollCounter = 0
+			}
 			switch e := app.Filter(e).(type) {
 			case lifecycle.Event:
 				switch e.Crosses(lifecycle.StageVisible) {
@@ -84,17 +83,25 @@ func main() {
 				c = e
 				touchX = float32(c.WidthPx / 2)
 				touchY = float32(c.HeightPx / 2)
+				gm.SetOrigin(touchX, touchY)
 			case paint.Event:
 				onPaint(c)
 				a.EndPaint(e)
 			case touch.Event:
-				touchX = e.X
-				touchY = e.Y
+				if e.Type == touch.TypeEnd && iHaveTheCard {
+					gm.PassTheCard()
+					touchX = gm.GetOriginX()
+					touchY = gm.GetOriginY()
+					iHaveTheCard = false
+				} else {
+					touchX = e.X
+					touchY = e.Y
+				}
 			}
-		}
 
+		}
 		// Normal means to end v23 services:
-		// <-signals.ShutdownOnSignals(ctx)
+		<-signals.ShutdownOnSignals(ctx)
 
 	})
 }
@@ -125,37 +132,47 @@ func onStop() {
 }
 
 func onPaint(c config.Event) {
-	gl.ClearColor(1, 0, 0, 1)
+	if iHaveTheCard {
+		red = 0.8
+	} else {
+		red = 0.4
+	}
+	gl.ClearColor(red, green, blue, 1)
 	gl.Clear(gl.COLOR_BUFFER_BIT)
 
 	gl.UseProgram(program)
 
-	green += 0.01
-	if green > 1 {
-		green = 0
+	gray += 0.01
+	if gray > 1 {
+		gray = 0
 	}
-	gl.Uniform4f(color, 0, green, 0, 1)
-
+	// Color the triangle
+	gl.Uniform4f(color, gray, 0, gray, 1)
+	// Move the triangle
 	gl.Uniform2f(offset, touchX/float32(c.WidthPx), touchY/float32(c.HeightPx))
 
 	gl.BindBuffer(gl.ARRAY_BUFFER, buf)
 	gl.EnableVertexAttribArray(position)
 	gl.VertexAttribPointer(position, coordsPerVertex, gl.FLOAT, false, 0, 0)
-	gl.DrawArrays(gl.TRIANGLES, 0, vertexCount)
+	if iHaveTheCard {
+		gl.DrawArrays(gl.TRIANGLES, 0, vertexCount)
+	}
 	gl.DisableVertexAttribArray(position)
 
 	debug.DrawFPS(c)
 }
 
 var triangleData = f32.Bytes(binary.LittleEndian,
-	0.0, 0.4, 0.0, // top left
-	0.0, 0.0, 0.0, // bottom left
-	0.4, 0.0, 0.0, // bottom right
+	// x, y, z, in percentage distance from origin to window border
+	-0.4, 0.2, 0.0,
+	0.4, 0.2, 0.0,
+	0.4, -0.2, 0.0,
+	-0.4, -0.2, 0.0,
 )
 
 const (
 	coordsPerVertex = 3
-	vertexCount     = 3
+	vertexCount     = 4
 )
 
 const vertexShader = `#version 100
