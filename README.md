@@ -2,10 +2,12 @@
 
 Steps to get v23 running in Go directly on mobile, and reproduce v23 bugs.
 
-The procedure below puts code in the two directories
+The procedure below puts code into two arbitrarily named directories
 
 ```
- ~/pumpkin
+# Gets v23 and gomobile code
+~/pumpkin
+# Gets the code for the app in this repo
  ~/mutantfortune
 ```
 
@@ -20,10 +22,7 @@ on the right track.
 
 ## Install android-sdk-linux
 
-See the [instructions](https://developer.android.com/sdk/index.html).
-
-You'll need `adb`
-
+You'll need `adb`.  See the [instructions](https://developer.android.com/sdk/index.html).
 
 ## Install go 1.5 beta
 
@@ -31,7 +30,7 @@ See the [instructions](http://golang.org/doc/install/source).
 
 ## Clear your environment
 
-Using `pumpkin` and `mutantfortune` arbitrarily.  Use whatever you want.
+Using `pumpkin` and `mutantfortune` arbitrarily.
 
 ```
 unset GOROOT
@@ -131,24 +130,62 @@ kill $TUT_PID_SERVER
 $V_BIN/namespace --v23.namespace.root '/104.197.96.113:3389' glob -l '*'
 ```
 
+## Test graphics in two desktop workstations
+
+
+Build `croupier` for the  desktop.
+```
+GOPATH=~/mutantfortune:~/pumpkin go install ${gitmf}/croupier
+```
+
+Check the namespace, make sure there's nothing that looks like `croupier*`
+```
+$V_BIN/namespace --v23.namespace.root '/104.197.96.113:3389' glob  '*'
+```
+
+Open another terminal and run
+```
+~/mutantfortune/bin/croupier 
+```
+
+You should see a new window with a triangle.
+
+Open yet _another_ terminal and run
+```
+~/mutantfortune/bin/croupier 
+```
+This window should not have a triangle.
+Drag the triangle in the first window - it should hop to the second window.
+It should be possible to send it back.
+
+The `namespace` command should show two services, `croupier0` and `croupier1`
+
+__To run with more than two "devices", one must change the the
+constant `expectedInstances` in the file
+[game_manager.go](https://github.com/monopole/mutantfortune/blob/master/croupier/util/game_manager.go).__
+
+
 ## Now try the mobile app
+
+The mobile app counts as a "device" against your limit determined by
+`expectedInstances`, so for the default value of two, only
+one desktop terminal is allowed.
 
 Plug your dev phone into a USB port.
 
-Use the following to install an app called `croupier`, which will NOT
-do networking
+Enter this:
 
 ```
 GOPATH=~/mutantfortune:~/pumpkin $V_BIN/gomobile install ${gitmf}/croupier
 ```
 
-Run it to see the purple triangle - a trivial change from
-https://godoc.org/golang.org/x/mobile/example/basic
+This app is a small modification of the
+[gomobile basic example](https://godoc.org/golang.org/x/mobile/example/basic).
 
-Now edit the file and change `doV23 := false` to true, reinstall, and
-see the program fail.
+Run it, and you should see a triangle (or not) depending on the order in which you launched it with
+respect to other instances of the app.
 
-Look for `GoLog` in the output of
+To debug:
 
 ```
 adb logcat > log.txt
