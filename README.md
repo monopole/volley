@@ -127,20 +127,23 @@ Kill the service, and confirm that `croupier` no longer in the table.
 ```
 kill $TUT_PID_SERVER
 
-$V_BIN/namespace --v23.namespace.root '/104.197.96.113:3389' glob -l '*'
+$V_BIN/namespace --v23.namespace.root '/104.197.96.113:3389' glob -l 'croupier*'
 ```
 
-## Test graphics in two desktop workstations
+## Test graphics in two desktop terminals
 
 
 Build `croupier` for the  desktop.
+This app is a small modification of the
+[gomobile basic example](https://godoc.org/golang.org/x/mobile/example/basic).
+
 ```
 GOPATH=~/mutantfortune:~/pumpkin go install ${gitmf}/croupier
 ```
 
 Check the namespace, make sure there's nothing that looks like `croupier*`
 ```
-$V_BIN/namespace --v23.namespace.root '/104.197.96.113:3389' glob  '*'
+$V_BIN/namespace --v23.namespace.root '/104.197.96.113:3389' glob  'croupier*'
 ```
 
 Open another terminal and run
@@ -155,19 +158,22 @@ Open yet _another_ terminal and run
 ~/mutantfortune/bin/croupier 
 ```
 This window should not have a triangle.
-Drag the triangle in the first window - it should hop to the second window.
+
+Drag the triangle in the first window.
+On release, it should hop to the second window.
 It should be possible to send it back.
 
-The `namespace` command should show two services, `croupier0` and `croupier1`
+The `namespace` command above should now show two services, `croupier0` and `croupier1`
 
-__To run with more than two "devices", one must change the the
-constant `expectedInstances` in the file
+__To run with more than two devices (a 'device' == a desktop terminal
+or an app running on a phone), one must change the the constant
+`expectedInstances` in the file
 [game_manager.go](https://github.com/monopole/mutantfortune/blob/master/croupier/util/game_manager.go).__
 
 
-## Now try the mobile app
+## Now try the mobile version
 
-The mobile app counts as a "device" against your limit determined by
+The mobile app counts as a "device" against the  limit set by
 `expectedInstances`, so for the default value of two, only
 one desktop terminal is allowed.
 
@@ -179,10 +185,7 @@ Enter this:
 GOPATH=~/mutantfortune:~/pumpkin $V_BIN/gomobile install ${gitmf}/croupier
 ```
 
-This app is a small modification of the
-[gomobile basic example](https://godoc.org/golang.org/x/mobile/example/basic).
-
-Run it, and you should see a triangle (or not) depending on the order in which you launched it with
+You should see a triangle (or not) depending on the order in which you launched it with
 respect to other instances of the app.
 
 To debug:
