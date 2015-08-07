@@ -1,53 +1,60 @@
 # croupier
 Multi-device Go+GL+v23 demo.
 
-The procedure below writes to `~/pumpkin` to avoid
-messing up your non-pumpkin stuff. Adjust as desired.
+For bootstrapping, prefer a very clean environment.
 
 ```
 unset GOROOT
 unset GOPATH
-export PUMPKIN=~/pumpkin
-
 originalPath=$PATH
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 ```
 
-## For android deployment, install android-sdk-linux
+## Android development prep
 
-You'll need `adb` on your `PATH`. [Instructions](https://developer.android.com/sdk/index.html).
+Android's `adb` is a prerequisite.
 
-Or try this:
+Full instructions
+[here](https://developer.android.com/sdk/index.html), or try this:
 ```
 cd
-rmdir android-sdk-linux
+/bin/rm -rf android-sdk-linux
 curl http://dl.google.com/android/android-sdk_r24.3.3-linux.tgz -o - | tar xzf -
 cd android-sdk-linux
+
 # Answer ‘y’ a bunch of times, after consulting with an attorney.
 ./tools/android update sdk --no-ui
 
 # Might help to do this:
 sudo apt-get install lib32stdc++6
 
-# confirm android ready to rock
+# Confirm adb ready
+PATH=~/android-sdk-linux/platform-tools:$PATH
 ~/android-sdk-linux/platform-tools/adb version
+adb version
 ```
 
 
-## For iOS, TBD
+## iOS development prep
+
+_TBD_
 
 ## Install go 1.5 beta
 
-Go 1.5 required (still beta as of July 2015). [Instructions](http://golang.org/doc/install/source).
+Go 1.5 required (still beta as of July 2015).
+
+Full instructions [here](http://golang.org/doc/install/source), or try this:
 
 ```
 cd
-rmdir go
+
 # The following writes to ./go
-curl https://storage.googleapis.com/golang/go1.4.2.linux-amd64.tar.gz -o - | tar xzf -
+/bin/rm -rf go
+curl https://storage.googleapis.com/golang/go1.4.2.linux-amd64.tar.gz -o - \
+    | tar xzf -
 
 # Get this ‘go’ out of the way for go1.5 beta (which needs 1.4.2 to build it)
-mv go go1.4.2  
+mv go go1.4.2
 
 # Build Go from head per http://golang.org/doc/install/source
 git clone https://go.googlesource.com/go
@@ -56,17 +63,24 @@ git checkout master
 cd src
 GOROOT_BOOTSTRAP=$HOME/go1.4.2 ./all.bash
 
-
-# Confirm go ready to rock
+# Confirm Go ready
+PATH=~/go/bin:$PATH
 ~/go/bin/go version
+go version
 ```
 
-## Clear your environment
+
+## Define a workspace for the actual demo code
+
+The procedure below writes to `~/pumpkin`.
+Adjust as desired.
 
 ```
+export PUMPKIN=~/pumpkin
 /bin/rm -rf $PUMPKIN
 mkdir $PUMPKIN
 ```
+
 
 ## Install v23 as an end-user
 
