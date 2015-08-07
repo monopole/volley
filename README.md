@@ -1,9 +1,8 @@
 # croupier
-Multi-device Go/Gl/v23 demo
+Multi-device Go+GL+v23 demo.
 
-Steps to get v23 running in Go directly on mobile, and reproduce v23 bugs.
-
-The procedure below writes to `~/pumpkin`; adjust as desired.
+The procedure below writes to `~/pumpkin` to avoid
+messing up your non-pumpkin stuff. Adjust as desired.
 
 ```
 unset GOROOT
@@ -11,15 +10,15 @@ unset GOPATH
 export PUMPKIN=~/pumpkin
 ```
 
-## Install android-sdk-linux
+## For android deployment, install android-sdk-linux
 
-You'll need `adb` on your `PATH`.  See the
-[instructions](https://developer.android.com/sdk/index.html).
+You'll need `adb` on your `PATH`. [Instructions](https://developer.android.com/sdk/index.html).
+
+## For iOS, TBD
 
 ## Install go 1.5 beta
 
-You'll need bleeding edge 1.5 `go` on your `PATH`.  See the
-[instructions](http://golang.org/doc/install/source).
+Go 1.5 required (still beta as of July 2015). [Instructions](http://golang.org/doc/install/source).
 
 ## Clear your environment
 
