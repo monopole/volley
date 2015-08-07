@@ -8,17 +8,58 @@ messing up your non-pumpkin stuff. Adjust as desired.
 unset GOROOT
 unset GOPATH
 export PUMPKIN=~/pumpkin
+
+originalPath=$PATH
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 ```
 
 ## For android deployment, install android-sdk-linux
 
 You'll need `adb` on your `PATH`. [Instructions](https://developer.android.com/sdk/index.html).
 
+Or try this:
+```
+cd
+rmdir android-sdk-linux
+curl http://dl.google.com/android/android-sdk_r24.3.3-linux.tgz -o - | tar xzf -
+cd android-sdk-linux
+# Answer ‘y’ a bunch of times, after consulting with an attorney.
+./tools/android update sdk --no-ui
+
+# Might help to do this:
+sudo apt-get install lib32stdc++6
+
+# confirm android ready to rock
+~/android-sdk-linux/platform-tools/adb version
+```
+
+
 ## For iOS, TBD
 
 ## Install go 1.5 beta
 
 Go 1.5 required (still beta as of July 2015). [Instructions](http://golang.org/doc/install/source).
+
+```
+cd
+rmdir go
+# The following writes to ./go
+curl https://storage.googleapis.com/golang/go1.4.2.linux-amd64.tar.gz -o - | tar xzf -
+
+# Get this ‘go’ out of the way for go1.5 beta (which needs 1.4.2 to build it)
+mv go go1.4.2  
+
+# Build Go from head per http://golang.org/doc/install/source
+git clone https://go.googlesource.com/go
+cd go
+git checkout master
+cd src
+GOROOT_BOOTSTRAP=$HOME/go1.4.2 ./all.bash
+
+
+# Confirm go ready to rock
+~/go/bin/go version
+```
 
 ## Clear your environment
 
