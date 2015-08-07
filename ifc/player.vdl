@@ -1,0 +1,21 @@
+package ifc
+
+type GameState struct {
+  current int32
+  previous int32
+}
+
+type GameBuddy interface {
+  // Receiver adds 'player' N to known list of players and
+  // concomitantly promises to inform 'N' of game state changes.
+  Recognize(int32 n) error
+
+  // Receiver forgets player N.
+  Forget(int32 n) error
+
+  // Receiver accepts new state.
+  PutGameState(game GameState) error
+
+  // Receiver returns its state
+  GetGameState() (GameState | error)
+}
