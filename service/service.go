@@ -2,52 +2,63 @@ package service
 
 import (
 	"github.com/monopole/croupier/ifc"
-	"math/rand"
 	"sync"
 	"v.io/v23/context"
 	"v.io/v23/rpc"
 )
 
 type impl struct {
-	players []int32
+	players []ifc.Player
 	state   ifc.GameState
 	mu      sync.RWMutex
 }
 
 func Make() ifc.GameBuddyServerMethods {
 	return &impl{
-		players: []int32{},
-		state:   {0, 0},
+		players: []ifc.Player{},
+		state:   ifc.GameState{ifc.UnknownPlayer, ifc.UnknownPlayer},
 	}
 }
 
-func (f *impl) Recognize(_ *context.T, _ rpc.ServerCall, n int32) error {
-	f.mu.RLock()
-	defer f.mu.RUnlock()
-	f.players = append(f.players, n)
+func (x *impl) Recognize(_ *context.T, _ rpc.ServerCall, p ifc.Player) error {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	x.players = append(x.players, p)
 	return nil
 }
 
-func (f *impl) Forget(_ *context.T, _ rpc.ServerCall, n int32) error {
-	f.mu.RLock()
-	defer f.mu.RUnlock()
-	f.removePlayer(n)
+func (x *impl) Forget(_ *context.T, _ rpc.ServerCall, p ifc.Player) error {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	x.removePlayer(p)
 	return nil
 }
 
-func (f *impl) removePlayer(n int32) {
-	// Implement.
+func findIndex(limit int, predicate func(i int) bool) int {
+	for i := 0; i < limit; i++ {
+		if predicate(i) {
+			return i
+		}
+	}
+	return -1
 }
 
-func (f *impl) PutGameState(_ *context.T, _ rpc.ServerCall, incoming GameState) error {
-	f.mu.RLock()
-	defer f.mu.RUnlock()
-	f.state = incoming
+func (x *impl) removePlayer(p ifc.Player) {
+	i := findIndex(len(x.players), func(i int) bool { return x.players[i] == p })
+	if i > -1 {
+		x.players = append(x.players[:i], x.players[i+1:]...)
+	}
+}
+
+func (x *impl) PutGameState(_ *context.T, _ rpc.ServerCall, s ifc.GameState) error {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	x.state = s
 	return nil
 }
 
-func (f *impl) GetGameState(_ *context.T, _ rpc.ServerCall) (s GameState, err error) {
-	f.mu.RLock()
-	defer f.mu.RUnlock()
-	return f.state, nil
+func (x *impl) GetGameState(_ *context.T, _ rpc.ServerCall) (s ifc.GameState, err error) {
+	x.mu.RLock()
+	defer x.mu.RUnlock()
+	return x.state, nil
 }

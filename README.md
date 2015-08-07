@@ -57,20 +57,20 @@ GOPATH=$PUMPKIN $PUMPKIN/bin/gomobile init
 
 Create and fill `$PUMPKIN/src/github.com/monopole/croupier'.
 
-It may complain about _No buildable Go source_ - no worries.
+Ignore complaints about _No buildable Go source_.
 
 ```
 gitmf=github.com/monopole/croupier
 GOPATH=$PUMPKIN go get -d ${gitmf}
 ```
 
-Now generate the Go that was missing and build the v23 fortune server
+Generate the Go that was missing and build the v23 fortune server
 and client stuff.
 
 ```
 VDLROOT=$PUMPKIN/src/v.io/v23/vdlroot \
     VDLPATH=$PUMPKIN/src \
-    $PUMPKIN/bin/vdl generate --lang go $V_TUT/src/${gitmf}/ifc
+    $PUMPKIN/bin/vdl generate --lang go $PUMPKIN/src/${gitmf}/ifc
 
 GOPATH=$PUMPKIN go build ${gitmf}/ifc
 GOPATH=$PUMPKIN go build ${gitmf}/service
