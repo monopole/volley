@@ -1,9 +1,24 @@
+// System and game logic.
+
+// An instance of GameManager is a peer to other instances on the net.
+// Each has an embedded V23 service, and is a direct client to the V23
+// services held by all the other instances.  It finds all the other
+// instances, figures out what it should call itself, and fires off
+// go routines to manage data coming in on various channels.
+//
+// The GameManager is presumably owned by whatever owns the UX event
+// loop,
+//
+// During play, UX or underlying android/iOS events may trigger calls
+// to other V23 services, Likewise, an incoming RPC may change data
+// held by the manager, to ultimately impact the UX (e.g. a card is
+// passed in by another player).
+
 package game
 
 import (
-	"github.com/monopole/mutantfortune/ifc"
-	"github.com/monopole/mutantfortune/server/util"
-	"github.com/monopole/mutantfortune/service"
+	"github.com/monopole/croupier/ifc"
+	"github.com/monopole/croupier/service"
 	"log"
 	"strconv"
 	"time"
@@ -14,23 +29,24 @@ import (
 	_ "v.io/x/ref/runtime/factories/generic"
 )
 
-const rootName = "croupier"
+const rootName = "croupier/player"
+const namespaceRoot = "/104.197.96.113:3389"
 
 // The number of instances of this program to run in a demo.
 // Need an exact count to wire them up properly.
 const expectedInstances = 2
 
 func serverName(n int) string {
-	return rootName + strconv.Itoa(n)
+	return rootName + fmt.Sprintf("%04d", n)
 }
 
 type GameManager struct {
 	ctx      *context.T
 	myNumber int // my player number
-	master   ifc.FortuneClientStub
+	master   ifc.GameBuddyClientStub
+	chatty   bool    // If true, send fortunes back and forth and log them.  For fun.
 	originX  float32 // remember where to put the card
 	originY  float32
-	chatty   bool // If true, send fortunes back and forth and log them.  For fun.
 }
 
 func (gm *GameManager) MyNumber() int {
@@ -51,28 +67,26 @@ func (gm *GameManager) SetOrigin(x, y float32) {
 }
 
 func NewGameManager(ctx *context.T) *GameManager {
-	gm := &GameManager{ctx, 0, nil, 0, 0, false}
+	gm := &GameManager{ctx, 0, nil, true}
 	gm.initialize()
 	return gm
 }
 
 func (gm *GameManager) initialize() {
-	v23.GetNamespace(gm.ctx).SetRoots("/104.197.96.113:3389")
+	v23.GetNamespace(gm.ctx).SetRoots(namespaceRoot)
 
-	// If there are no croupiers, I register as server0.
-	// If there is one croupier already, I register as server1, etc.
-	// Only the first server to register will actuall be used as a server.
-	// The remaining instances  act as overblown presence counters.
-	gm.myNumber = gm.croupierCount()
+	gm.myNumber = gm.playerCount()
 
+	// If there are no players, I register as player 1.  If there is one
+	// player already, I register as player 2, etc.
 	gm.registerService()
 
 	// No matter who I am, I am a client to server0.
-	gm.master = ifc.FortuneClient(serverName(0))
+	gm.master = ifc.GameBuddyClient(serverName(0))
 }
 
-// Scan mounttable for count of services matching "croupier*"
-func (gm *GameManager) croupierCount() (count int) {
+// Scan mounttable for count of services matching "{rootName}*"
+func (gm *GameManager) playerCount() (count int) {
 	count = 0
 	rCtx, cancel := context.WithTimeout(gm.ctx, time.Minute)
 	defer cancel()
@@ -98,36 +112,27 @@ func (gm *GameManager) croupierCount() (count int) {
 	return
 }
 
-// Register a service in the namespace.
+// Register a service in the namespace and begin serving.
 func (gm *GameManager) registerService() {
-	s := util.MakeServer(gm.ctx)
+	s := MakeServer(gm.ctx)
 	myName := serverName(gm.myNumber)
 	log.Printf("Calling myself %s\n", myName)
-	err := s.Serve(myName, ifc.FortuneServer(service.Make()), util.MakeAuthorizer())
+	err := s.Serve(myName, ifc.GameBuddyServer(service.Make()), MakeAuthorizer())
 	if err != nil {
 		log.Panic("Error serving service: ", err)
 	}
 }
 
 func (gm *GameManager) WhoHasTheCard() int {
-	if gm.chatty {
-		fortune, err := gm.master.Get(gm.ctx, options.SkipServerEndpointAuthorization{})
-		if err != nil {
-			log.Printf("error getting fortune: %v", err)
-			return 0
-		}
-		log.Println(fortune)
-	}
 	who, _ := gm.master.WhoHasCard(gm.ctx, options.SkipServerEndpointAuthorization{})
 	return int(who)
 }
 
+// Modify the game state, and send it to all players, starting with the
+// player that's gonna get the card.
 func (gm *GameManager) PassTheCard() {
 	if gm.chatty {
-		if err := gm.master.Add(gm.ctx, serverName(gm.myNumber)+" "+time.Now().String(),
-			options.SkipServerEndpointAuthorization{}); err != nil {
-			log.Printf("error adding fortune: %v\n", err)
-		}
+		log.Printf("Sending to %v\n", serverName(gm.myNumber)+" "+time.Now().String())
 	}
 	if err := gm.master.SendCardTo(gm.ctx, int32((gm.myNumber+1)%expectedInstances),
 		options.SkipServerEndpointAuthorization{}); err != nil {

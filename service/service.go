@@ -1,3 +1,9 @@
+// Vanadium service implementation.
+// Recognizes and forgets other players.
+// Accepts a game state and offers it to others.
+// To its holder, it offers a list of players,
+// mutators on the game state.
+
 package service
 
 import (
