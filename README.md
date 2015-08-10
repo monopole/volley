@@ -1,6 +1,9 @@
 # croupier
 Multi-device Go+GL+v23 demo.
 
+
+## Install prerequisites
+
 For bootstrapping, prefer a very clean environment.
 
 ```
@@ -10,9 +13,11 @@ originalPath=$PATH
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 ```
 
-## Android development prep
+### Set up Android development
 
 Android's `adb` is a prerequisite.
+
+#### Install
 
 Full instructions
 [here](https://developer.android.com/sdk/index.html), or try this:
@@ -27,21 +32,25 @@ cd android-sdk-linux
 
 # Might help to do this:
 sudo apt-get install lib32stdc++6
+```
 
-# Confirm adb ready
+#### Add to path
+
+```
 PATH=~/android-sdk-linux/platform-tools:$PATH
 ~/android-sdk-linux/platform-tools/adb version
 adb version
 ```
 
-
-## iOS development prep
+### Setup for iOS development
 
 _TBD_
 
-## Install go 1.5 beta
+### Install go 1.5 beta
 
 Go 1.5 required (still beta as of July 2015).
+
+#### Install
 
 Full instructions [here](http://golang.org/doc/install/source), or try this:
 
@@ -62,21 +71,28 @@ cd go
 git checkout master
 cd src
 GOROOT_BOOTSTRAP=$HOME/go1.4.2 ./all.bash
+```
 
-# Confirm Go ready
+
+#### Add to PATH
+```
 PATH=~/go/bin:$PATH
 ~/go/bin/go version
 go version
 ```
 
 
-## Define a workspace for the actual demo code
+## Define workspace
 
-The procedure below writes to `~/pumpkin`.
+The procedure below writes to `~/pumpkin` (arbitary)
 Adjust as desired.
 
 ```
 export PUMPKIN=~/pumpkin
+```
+
+Optionally wipe it
+```
 /bin/rm -rf $PUMPKIN
 mkdir $PUMPKIN
 ```
@@ -84,8 +100,7 @@ mkdir $PUMPKIN
 
 ## Install v23 as an end-user
 
-Installing as an end-user is easier than installing as a
-[contributor](https://v.io/community/contributing.html).
+Full instructions [here](https://v.io/installation/details.html), or try this:
 
 __Because of code mirror server failures, one may have to repeat these
 incantations a few times.__
@@ -97,9 +112,6 @@ GOPATH=$PUMPKIN go install v.io/x/ref/services/agent/...
 GOPATH=$PUMPKIN go install v.io/x/ref/services/mounttable/...
 ```
 
-Otherwise follow the full
-[instructions](https://v.io/installation/details.html).
-
 ## Install Go mobile stuff
 
 ```
@@ -109,13 +121,17 @@ GOPATH=$PUMPKIN $PUMPKIN/bin/gomobile init
 
 ## Install croupier
 
-Create and fill `$PUMPKIN/src/github.com/monopole/croupier'.
+Create and fill `$PUMPKIN/src/github.com/monopole/croupier`.
 
 Ignore complaints about _No buildable Go source_.
 
 ```
-gitmf=github.com/monopole/croupier
-GOPATH=$PUMPKIN go get -d ${gitmf}
+gitdir=github.com/monopole/croupier
+```
+
+Grab the code:
+```
+GOPATH=$PUMPKIN go get -d ${gitdir}
 ```
 
 Generate the Go that was missing and build the v23 fortune server
@@ -124,12 +140,12 @@ and client stuff.
 ```
 VDLROOT=$PUMPKIN/src/v.io/v23/vdlroot \
     VDLPATH=$PUMPKIN/src \
-    $PUMPKIN/bin/vdl generate --lang go $PUMPKIN/src/${gitmf}/ifc
+    $PUMPKIN/bin/vdl generate --lang go $PUMPKIN/src/${gitdir}/ifc
 
-GOPATH=$PUMPKIN go build ${gitmf}/ifc
-GOPATH=$PUMPKIN go build ${gitmf}/service
-GOPATH=$PUMPKIN go install ${gitmf}/client
-GOPATH=$PUMPKIN go install ${gitmf}/server
+GOPATH=$PUMPKIN go build ${gitdir}/ifc
+GOPATH=$PUMPKIN go build ${gitdir}/service
+GOPATH=$PUMPKIN go install ${gitdir}/client
+GOPATH=$PUMPKIN go install ${gitdir}/server
 ```
 
 ## Test desktop mode
@@ -139,12 +155,12 @@ This app is a small modification of the
 [gomobile basic example](https://godoc.org/golang.org/x/mobile/example/basic).
 
 ```
-GOPATH=$PUMPKIN go install ${gitmf}/croupier
+GOPATH=$PUMPKIN go install ${gitdir}/croupier
 ```
 
 Check the namespace, make sure there's nothing that looks like `croupier*`
 ```
-$V_BIN/namespace --v23.namespace.root '/104.197.96.113:3389' glob  'croupier*'
+$PUMPKIN/bin/namespace --v23.namespace.root '/104.197.96.113:3389' glob  'croupier*'
 ```
 
 Open another terminal and run
@@ -183,7 +199,7 @@ Plug your dev phone into a USB port.
 Enter this:
 
 ```
-GOPATH=$PUMPKIN:~/pumpkin $V_BIN/gomobile install ${gitmf}/croupier
+GOPATH=$PUMPKIN:~/pumpkin $PUMPKIN/bin/gomobile install ${gitdir}/croupier
 ```
 
 You should see a triangle (or not) depending on the order in which you launched it with
