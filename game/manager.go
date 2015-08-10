@@ -1,6 +1,8 @@
 // System and game logic.
 
 // An instance of GameManager is a peer to other instances on the net.
+// Each player will have one GameManager.
+//
 // Each has an embedded V23 service, and is a direct client to the V23
 // services held by all the other instances.  It finds all the other
 // instances, figures out what it should call itself, and fires off
