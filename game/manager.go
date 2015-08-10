@@ -17,15 +17,15 @@
 package game
 
 import (
+	"fmt"
 	"github.com/monopole/croupier/ifc"
 	"github.com/monopole/croupier/service"
 	"log"
-	"strconv"
 	"time"
 	"v.io/v23"
 	"v.io/v23/context"
 	"v.io/v23/naming"
-	"v.io/v23/options"
+	//	"v.io/v23/options"
 	_ "v.io/x/ref/runtime/factories/generic"
 )
 
@@ -67,7 +67,7 @@ func (gm *GameManager) SetOrigin(x, y float32) {
 }
 
 func NewGameManager(ctx *context.T) *GameManager {
-	gm := &GameManager{ctx, 0, nil, true}
+	gm := &GameManager{ctx, 0, nil, true, 0, 0}
 	gm.initialize()
 	return gm
 }
@@ -124,7 +124,8 @@ func (gm *GameManager) registerService() {
 }
 
 func (gm *GameManager) WhoHasTheCard() int {
-	who, _ := gm.master.WhoHasCard(gm.ctx, options.SkipServerEndpointAuthorization{})
+	// who, _ := gm.master.WhoHasCard(gm.ctx, options.SkipServerEndpointAuthorization{})
+	who := 1
 	return int(who)
 }
 
@@ -134,8 +135,9 @@ func (gm *GameManager) PassTheCard() {
 	if gm.chatty {
 		log.Printf("Sending to %v\n", serverName(gm.myNumber)+" "+time.Now().String())
 	}
-	if err := gm.master.SendCardTo(gm.ctx, int32((gm.myNumber+1)%expectedInstances),
-		options.SkipServerEndpointAuthorization{}); err != nil {
-		log.Printf("error sending card: %v\n", err)
-	}
+	//	if err := gm.master.SendCardTo(gm.ctx, int32((gm.myNumber+1)%expectedInstances),
+	//		options.SkipServerEndpointAuthorization{}); err != nil {
+	//		log.Printf("error sending card: %v\n", err)
+	//	}
+	log.Printf("where i would have sent the card.\n")
 }

@@ -8,6 +8,7 @@ package main
 import (
 	"encoding/binary"
 	"github.com/monopole/croupier/game"
+	"github.com/monopole/croupier/ifc"
 	"golang.org/x/mobile/app"
 	"golang.org/x/mobile/event/config"
 	"golang.org/x/mobile/event/lifecycle"
@@ -39,6 +40,7 @@ var (
 	touchX float32
 	touchY float32
 
+	gameState    ifc.GameState
 	iHaveTheCard bool
 )
 
@@ -64,7 +66,8 @@ func main() {
 		for e := range a.Events() {
 			pollCounter++
 			if pollCounter == 30 { // 60 ~= one second
-				iHaveTheCard = gm.MyNumber() == gm.WhoHasTheCard()
+				iHaveTheCard = true
+				//	iHaveTheCard = gm.MyNumber() == gm.WhoHasTheCard()
 				pollCounter = 0
 			}
 			switch e := app.Filter(e).(type) {

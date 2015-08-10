@@ -20,7 +20,8 @@ type GameBuddy interface {
   // concomitantly promises to inform p of game state changes.
   Recognize(p Player) error
 
-  // Receiver forgets player p.
+  // Receiver forgets player p, because player p has quit
+  // or has been ejected from the game.
   Forget(p Player) error
 
   // Receiver accepts new state.
