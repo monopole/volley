@@ -2,7 +2,7 @@
 Multi-device Go+GL+v23 demo.
 
 
-## Install prerequisites
+## Install factory-ready prerequisites
 
 For bootstrapping, prefer a very clean environment.
 
@@ -84,17 +84,17 @@ go version
 
 ## Define workspace
 
-The procedure below writes to `~/pumpkin` (arbitary)
-Adjust as desired.
+The remaining commands destructively write to the directory
+pointed to by `VEGGIE`.
 
 ```
-export PUMPKIN=~/pumpkin
+export VEGGIE=~/pumpkin
 ```
 
 Optionally wipe it
 ```
-/bin/rm -rf $PUMPKIN
-mkdir $PUMPKIN
+/bin/rm -rf $VEGGIE
+mkdir $VEGGIE
 ```
 
 
@@ -106,22 +106,22 @@ __Because of code mirror server failures, one may have to repeat these
 incantations a few times.__
 
 ```
-GOPATH=$PUMPKIN go get -d v.io/x/ref/...
-GOPATH=$PUMPKIN go install v.io/x/ref/cmd/...
-GOPATH=$PUMPKIN go install v.io/x/ref/services/agent/...
-GOPATH=$PUMPKIN go install v.io/x/ref/services/mounttable/...
+GOPATH=$VEGGIE go get -d v.io/x/ref/...
+GOPATH=$VEGGIE go install v.io/x/ref/cmd/...
+GOPATH=$VEGGIE go install v.io/x/ref/services/agent/...
+GOPATH=$VEGGIE go install v.io/x/ref/services/mounttable/...
 ```
 
 ## Install Go mobile stuff
 
 ```
-GOPATH=$PUMPKIN go get golang.org/x/mobile/cmd/gomobile
-GOPATH=$PUMPKIN $PUMPKIN/bin/gomobile init
+GOPATH=$VEGGIE go get golang.org/x/mobile/cmd/gomobile
+GOPATH=$VEGGIE $VEGGIE/bin/gomobile init
 ```
 
-## Install croupier
+## Install game software
 
-Create and fill `$PUMPKIN/src/github.com/monopole/croupier`.
+Create and fill `$VEGGIE/src/github.com/monopole/croupier`.
 
 Ignore complaints about _No buildable Go source_.
 
@@ -131,21 +131,21 @@ gitdir=github.com/monopole/croupier
 
 Grab the code:
 ```
-GOPATH=$PUMPKIN go get -d ${gitdir}
+GOPATH=$VEGGIE go get -d ${gitdir}
 ```
 
 Generate the Go that was missing and build the v23 fortune server
 and client stuff.
 
 ```
-VDLROOT=$PUMPKIN/src/v.io/v23/vdlroot \
-    VDLPATH=$PUMPKIN/src \
-    $PUMPKIN/bin/vdl generate --lang go $PUMPKIN/src/${gitdir}/ifc
+VDLROOT=$VEGGIE/src/v.io/v23/vdlroot \
+    VDLPATH=$VEGGIE/src \
+    $VEGGIE/bin/vdl generate --lang go $VEGGIE/src/${gitdir}/ifc
 
-GOPATH=$PUMPKIN go build ${gitdir}/ifc
-GOPATH=$PUMPKIN go build ${gitdir}/service
-GOPATH=$PUMPKIN go install ${gitdir}/client
-GOPATH=$PUMPKIN go install ${gitdir}/server
+GOPATH=$VEGGIE go build ${gitdir}/ifc
+GOPATH=$VEGGIE go build ${gitdir}/service
+GOPATH=$VEGGIE go install ${gitdir}/client
+GOPATH=$VEGGIE go install ${gitdir}/server
 ```
 
 ## Test desktop mode
@@ -155,24 +155,24 @@ This app is a small modification of the
 [gomobile basic example](https://godoc.org/golang.org/x/mobile/example/basic).
 
 ```
-GOPATH=$PUMPKIN go install ${gitdir}/croupier
+GOPATH=$VEGGIE go install ${gitdir}/croupier
 ```
 
 Check the namespace, make sure there's nothing that looks like `croupier*`
 ```
-$PUMPKIN/bin/namespace --v23.namespace.root '/104.197.96.113:3389' glob  'croupier*'
+$VEGGIE/bin/namespace --v23.namespace.root '/104.197.96.113:3389' glob  'croupier*'
 ```
 
 Open another terminal and run
 ```
-$PUMPKIN/bin/croupier 
+$VEGGIE/bin/croupier 
 ```
 
 You should see a new window with a triangle.
 
 Open yet _another_ terminal and run
 ```
-$PUMPKIN/bin/croupier 
+$VEGGIE/bin/croupier 
 ```
 This window should not have a triangle.
 
@@ -188,7 +188,7 @@ or an app running on a phone), one must change the the constant
 [game_manager.go](https://github.com/monopole/mutantfortune/blob/master/croupier/util/game_manager.go).__
 
 
-## Now try the mobile version
+## Try the mobile version
 
 The mobile app counts as a "device" against the  limit set by
 `expectedInstances`, so for the default value of two, only
@@ -199,7 +199,7 @@ Plug your dev phone into a USB port.
 Enter this:
 
 ```
-GOPATH=$PUMPKIN:~/pumpkin $PUMPKIN/bin/gomobile install ${gitdir}/croupier
+GOPATH=$VEGGIE:~/pumpkin $VEGGIE/bin/gomobile install ${gitdir}/croupier
 ```
 
 You should see a triangle (or not) depending on the order in which you launched it with
