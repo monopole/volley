@@ -6,7 +6,7 @@
 package main
 
 import (
-	"github.com/monopole/croupier/game"
+	"github.com/monopole/croupier/screen"
 	"golang.org/x/mobile/app"
 	"golang.org/x/mobile/event/config"
 	"golang.org/x/mobile/event/lifecycle"
@@ -25,31 +25,24 @@ var (
 func main() {
 	app.Main(func(a app.App) {
 
-		managerImpl = game.NewV23Manager()
-		//		screen := NewScreen()
-		table := NewTable(managerImpl)
+		// managerImpl = game.NewV23Manager()
+		screen := screen.NewScreen()
+		// table := NewTable(managerImpl)
 
 		// The server initializes with player '0' holding the card.
-		//iHaveTheCard = gm.MyNumber() == 0
+		iHaveTheCard = true
 
 		log.Printf("Hi there.\n")
 
 		var c config.Event
-		pollCounter := 0
 		for e := range a.Events() {
-			pollCounter++
-			if pollCounter == 30 { // 60 ~= one second
-				iHaveTheCard = true
-				//	iHaveTheCard = gm.MyNumber() == gm.WhoHasTheCard()
-				pollCounter = 0
-			}
 			switch e := app.Filter(e).(type) {
 			case lifecycle.Event:
 				switch e.Crosses(lifecycle.StageVisible) {
 				case lifecycle.CrossOn:
-					screen.onStart()
+					screen.Start()
 				case lifecycle.CrossOff:
-					screen.onStop()
+					screen.Stop()
 				}
 			case config.Event:
 				c = e
@@ -57,18 +50,18 @@ func main() {
 				touchY = float32(c.HeightPx / 2)
 				//gm.SetOrigin(touchX, touchY)
 			case paint.Event:
-				screen.onPaint(c)
+				screen.Paint(c, iHaveTheCard, touchX, touchY)
 				a.EndPaint(e)
 			case touch.Event:
-				if e.Type == touch.TypeEnd && iHaveTheCard {
-					//gm.PassTheCard()
-					//touchX = gm.GetOriginX()
-					//touchY = gm.GetOriginY()
-					iHaveTheCard = false
-				} else {
-					touchX = e.X
-					touchY = e.Y
-				}
+				// if e.Type == touch.TypeEnd && iHaveTheCard {
+				// gm.PassTheCard()
+				// touchX = gm.GetOriginX()
+				// touchY = gm.GetOriginY()
+				// iHaveTheCard = false
+				// } else {
+				touchX = e.X
+				touchY = e.Y
+				// }
 			}
 
 		}
