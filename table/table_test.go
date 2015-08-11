@@ -1,4 +1,4 @@
-package game
+package table
 
 import (
 	"log"

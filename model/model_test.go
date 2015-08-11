@@ -1,4 +1,4 @@
-package game
+package model
 
 import (
 	"log"
@@ -6,6 +6,6 @@ import (
 )
 
 func TestSomething(t *testing.T) {
-	b := NewBall(3)
-	log.Println(b.Id())
+	b := NewBall(NewPlayer(3))
+	log.Println(b)
 }

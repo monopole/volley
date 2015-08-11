@@ -1,7 +1,8 @@
-package game
+package table
 
 import (
 	"fmt"
+	"github.com/monopole/croupier/model"
 )
 
 type commandType int
@@ -13,21 +14,14 @@ const (
 	commandImpulse
 )
 
-type Player struct {
-	id int
-}
-
-func NewPlayer(id int) *Player {
-	return &Player{id}
-}
-
 type Table struct {
-	me           *Ball
-	players      []*Player
+	me           *model.Player
+	balls        []*model.Ball
+	players      []*model.Player
 	quitting     chan bool
 	isDone       chan bool
 	commands     chan commandType
-	addPlayer    chan *Player
+	addPlayer    chan *model.Player
 	removePlayer chan int
 }
 
@@ -35,11 +29,14 @@ func NewTable(
 	id int,
 	isDone chan bool,
 	commands chan commandType,
-	addPlayer chan *Player,
+	addPlayer chan *model.Player,
 	removePlayer chan int) *Table {
-	b := NewBall(id)
-	return &Table{b,
-		[]*Player{NewPlayer(id)},
+
+	me := model.NewPlayer(id)
+
+	return &Table{me,
+		[]*model.Ball{model.NewBall(me)},
+		[]*model.Player{me},
 		make(chan bool),
 		isDone,
 		commands,

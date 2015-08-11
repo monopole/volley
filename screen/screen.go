@@ -2,13 +2,7 @@ package screen
 
 import (
 	"encoding/binary"
-	"github.com/monopole/croupier/game"
-	"github.com/monopole/croupier/ifc"
-	"golang.org/x/mobile/app"
 	"golang.org/x/mobile/event/config"
-	"golang.org/x/mobile/event/lifecycle"
-	"golang.org/x/mobile/event/paint"
-	"golang.org/x/mobile/event/touch"
 	"golang.org/x/mobile/exp/app/debug"
 	"golang.org/x/mobile/exp/f32"
 	"golang.org/x/mobile/exp/gl/glutil"
@@ -17,21 +11,25 @@ import (
 )
 
 var (
-	program  gl.Program
-	position gl.Attrib
-	offset   gl.Uniform
-	color    gl.Uniform
-	buf      gl.Buffer
-	green    float32
-	red      float32
-	blue     float32
+	program      gl.Program
+	position     gl.Attrib
+	offset       gl.Uniform
+	color        gl.Uniform
+	buf          gl.Buffer
+	green        float32
+	red          float32
+	blue         float32
+	gray         float32
+	touchX       float32
+	touchY       float32
+	iHaveTheCard bool
 )
 
 type Screen struct {
 }
 
 func NewScreen() *Screen {
-
+	gray = 0.1
 	red = 0.4
 	green = 0.4
 	blue = 0.4

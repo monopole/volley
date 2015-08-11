@@ -1,18 +1,15 @@
 package ifc
 
-type Player int32
+type Player struct {
+	Id int32
+}
 
-const ( UnknownPlayer = Player(0) )
-
-// The game is just passing a card around.
-// To win the game, be the last person to leave!
-//
-// The state is just the answer to two questions.
-// Who has the card?
-// Who did he/she get it from?
-type GameState struct {
-  Current Player
-  Previous Player
+type Ball struct {
+	Owner  Player
+	X  float32
+	Y  float32
+	Dx float32
+	Dy float32
 }
 
 type GameBuddy interface {
@@ -24,9 +21,6 @@ type GameBuddy interface {
   // or has been ejected from the game.
   Forget(p Player) error
 
-  // Receiver accepts new state.
-  PutGameState(state GameState) error
-
-  // Receiver returns its state
-  GetGameState() (GameState | error)
+  // Accept a ball.
+  Accept(b Ball) error
 }

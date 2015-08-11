@@ -1,9 +1,3 @@
-// Vanadium service implementation.
-// Recognizes and forgets other players.
-// Accepts a game state and offers it to others.
-// To its holder, it offers a list of players,
-// mutators on the game state.
-
 package service
 
 import (
@@ -14,29 +8,29 @@ import (
 )
 
 type impl struct {
-	players []ifc.Player
-	state   ifc.GameState
+	players []*ifc.Player
+	balls   []*ifc.Ball
 	mu      sync.RWMutex
 }
 
 func Make() ifc.GameBuddyServerMethods {
 	return &impl{
-		players: []ifc.Player{},
-		state:   ifc.GameState{ifc.UnknownPlayer, ifc.UnknownPlayer},
+		players: []*ifc.Player{},
+		balls:   []*ifc.Ball{},
 	}
 }
 
 func (x *impl) Recognize(_ *context.T, _ rpc.ServerCall, p ifc.Player) error {
 	x.mu.Lock()
 	defer x.mu.Unlock()
-	x.players = append(x.players, p)
+	x.players = append(x.players, &p)
 	return nil
 }
 
 func (x *impl) Forget(_ *context.T, _ rpc.ServerCall, p ifc.Player) error {
 	x.mu.Lock()
 	defer x.mu.Unlock()
-	x.removePlayer(p)
+	x.removePlayer(&p)
 	return nil
 }
 
@@ -49,22 +43,16 @@ func findIndex(limit int, predicate func(i int) bool) int {
 	return -1
 }
 
-func (x *impl) removePlayer(p ifc.Player) {
-	i := findIndex(len(x.players), func(i int) bool { return x.players[i] == p })
+func (x *impl) removePlayer(p *ifc.Player) {
+	i := findIndex(len(x.players), func(i int) bool { return x.players[i].Id == p.Id })
 	if i > -1 {
 		x.players = append(x.players[:i], x.players[i+1:]...)
 	}
 }
 
-func (x *impl) PutGameState(_ *context.T, _ rpc.ServerCall, s ifc.GameState) error {
+func (x *impl) Accept(_ *context.T, _ rpc.ServerCall, b ifc.Ball) error {
 	x.mu.Lock()
 	defer x.mu.Unlock()
-	x.state = s
+	x.balls = append(x.balls, &b)
 	return nil
-}
-
-func (x *impl) GetGameState(_ *context.T, _ rpc.ServerCall) (s ifc.GameState, err error) {
-	x.mu.RLock()
-	defer x.mu.RUnlock()
-	return x.state, nil
 }
