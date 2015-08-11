@@ -144,8 +144,10 @@ VDLROOT=$VEGGIE/src/v.io/v23/vdlroot \
 
 GOPATH=$VEGGIE go build ${gitdir}/ifc
 GOPATH=$VEGGIE go build ${gitdir}/service
-GOPATH=$VEGGIE go install ${gitdir}/client
-GOPATH=$VEGGIE go install ${gitdir}/server
+GOPATH=$VEGGIE go build ${gitdir}/game
+# GOPATH=$VEGGIE go build ${gitdir}/screen
+GOPATH=$VEGGIE go build ${gitdir}
+GOPATH=$VEGGIE go install ${gitdir}
 ```
 
 ## Test desktop mode
