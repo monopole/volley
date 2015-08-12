@@ -2,57 +2,50 @@ package service
 
 import (
 	"github.com/monopole/croupier/ifc"
-	"sync"
+	"github.com/monopole/croupier/model"
 	"v.io/v23/context"
 	"v.io/v23/rpc"
 )
 
 type impl struct {
-	players []*ifc.Player
-	balls   []*ifc.Ball
-	mu      sync.RWMutex
+	chRecognize chan<- *model.Player
+	chForget    chan<- *model.Player
+	chBall      chan<- *model.Ball
 }
 
-func Make() ifc.GameBuddyServerMethods {
+func Make(
+	chRecognize chan<- *model.Player,
+	chForget chan<- *model.Player,
+	chBall chan<- *model.Ball,
+) ifc.GameBuddyServerMethods {
 	return &impl{
-		players: []*ifc.Player{},
-		balls:   []*ifc.Ball{},
+		chRecognize: chRecognize,
+		chForget:    chForget,
+		chBall:      chBall,
 	}
 }
 
 func (x *impl) Recognize(_ *context.T, _ rpc.ServerCall, p ifc.Player) error {
-	x.mu.Lock()
-	defer x.mu.Unlock()
-	x.players = append(x.players, &p)
+	player := model.NewPlayer(int(p.Id))
+	go func() {
+		x.chRecognize <- player
+	}()
 	return nil
 }
 
 func (x *impl) Forget(_ *context.T, _ rpc.ServerCall, p ifc.Player) error {
-	x.mu.Lock()
-	defer x.mu.Unlock()
-	x.removePlayer(&p)
+	player := model.NewPlayer(int(p.Id))
+	go func() {
+		x.chForget <- player
+	}()
 	return nil
 }
 
-func findIndex(limit int, predicate func(i int) bool) int {
-	for i := 0; i < limit; i++ {
-		if predicate(i) {
-			return i
-		}
-	}
-	return -1
-}
-
-func (x *impl) removePlayer(p *ifc.Player) {
-	i := findIndex(len(x.players), func(i int) bool { return x.players[i].Id == p.Id })
-	if i > -1 {
-		x.players = append(x.players[:i], x.players[i+1:]...)
-	}
-}
-
 func (x *impl) Accept(_ *context.T, _ rpc.ServerCall, b ifc.Ball) error {
-	x.mu.Lock()
-	defer x.mu.Unlock()
-	x.balls = append(x.balls, &b)
+	player := model.NewPlayer(int(b.Owner.Id))
+	ball := model.NewBall(player, b.X, b.Y, b.Dx, b.Dy)
+	go func() {
+		x.chBall <- ball
+	}()
 	return nil
 }

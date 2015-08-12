@@ -21,6 +21,7 @@ package game
 import (
 	"fmt"
 	"github.com/monopole/croupier/ifc"
+	"github.com/monopole/croupier/model"
 	"github.com/monopole/croupier/service"
 	"log"
 	"time"
@@ -34,40 +35,47 @@ import (
 const rootName = "croupier/player"
 const namespaceRoot = "/104.197.96.113:3389"
 
-// The number of instances of this program to run in a demo.
-// Need an exact count to wire them up properly.
-const expectedInstances = 2
-
 func serverName(n int) string {
 	return rootName + fmt.Sprintf("%04d", n)
 }
 
-type Stringer interface {
-	String() string
-}
-
 type V23Manager struct {
 	ctx      *context.T
-	myNumber int // my player number
+	myNumber int
+	players  []*model.Player
 	master   ifc.GameBuddyClientStub
-	chatty   bool    // If true, send fortunes back and forth and log them.  For fun.
-	originX  float32 // remember where to put the card
-	originY  float32
+	chatty   bool
+
+	// V23Manager sends balls out on this channel.
+	chBall chan model.Ball
+
+	//chForget    chan model.Player
+	//chRecognize chan model.Player
+
+	// Anyone holding this channel can tell V23Manager to shut down.
+	// Shutdown means close all outgoing channels, stop serving, and
+	// exit all go routines.
+	chQuit <-chan chan bool
 }
 
 func (gm *V23Manager) MyNumber() int {
 	return gm.myNumber
 }
 
-func NewV23Manager(ctx *context.T) *V23Manager {
+func NewV23Manager(ctx *context.T, chQuit <-chan chan bool) *V23Manager {
 	ctx, shutdown := v23.Init()
 	if shutdown == nil {
 		log.Panic("Why is shutdown nil?")
 	}
 	//	defer shutdown()
 	//		<-signals.ShutdownOnSignals(ctx)
-	gm := &V23Manager{ctx, 0, nil, true, 0, 0}
-	gm.initialize()
+	gm := &V23Manager{
+		ctx, 0, nil, true,
+		make(chan model.Ball),
+		// make(chan model.Player),
+		// make(chan model.Player),
+		chQuit}
+	//gm.initialize()
 	return gm
 }
 
@@ -111,6 +119,24 @@ func (gm *V23Manager) playerCount() (count int) {
 	return
 }
 
+func (gm *V23Manager) run() {
+	for {
+		select {
+		case ch := <-gm.chQuit:
+			gm.shutdown()
+			ch <- true
+			return
+		}
+	}
+}
+
+func (gm *V23Manager) shutdown() {
+	log.Println("closing all outgoing channels...")
+	log.Println("telling my clients to shutdown...")
+	log.Println("shutting down server...")
+	log.Println("all Done...")
+}
+
 // Register a service in the namespace and begin serving.
 func (gm *V23Manager) registerService() {
 	s := MakeServer(gm.ctx)
@@ -119,6 +145,22 @@ func (gm *V23Manager) registerService() {
 	err := s.Serve(myName, ifc.GameBuddyServer(service.Make()), MakeAuthorizer())
 	if err != nil {
 		log.Panic("Error serving service: ", err)
+	}
+}
+
+func findIndex(limit int, predicate func(i int) bool) int {
+	for i := 0; i < limit; i++ {
+		if predicate(i) {
+			return i
+		}
+	}
+	return -1
+}
+
+func (gm *V23Manager) removePlayer(p *model.Player) {
+	i := findIndex(len(gm.players), func(i int) bool { return gm.players[i].Id == p.Id })
+	if i > -1 {
+		gm.players = append(gm.players[:i], gm.players[i+1:]...)
 	}
 }
 

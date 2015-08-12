@@ -31,8 +31,8 @@ type Ball struct {
 	dy float32
 }
 
-func NewBall(owner *Player) *Ball {
-	return &Ball{owner, 0, 0, 0, 0}
+func NewBall(owner *Player, px float32, py float32, dx float32, dy float32) *Ball {
+	return &Ball{owner, px, py, dx, dy}
 }
 
 func (b *Ball) String() string {

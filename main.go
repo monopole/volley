@@ -20,34 +20,47 @@ The scheme will be
 
 Major objects are
 
-1) Master - converts app events into simpler events
+*) Master (UserBuddy?) - converts app events into 'simpler' events
 
-2) Screen - An object with a collection of methods
+*) Screen - An object with a collection of methods
    for drawing.  No threads.  No channels.  Just a view.
+   Access to this object only via the screen.
 
-3) V23Manager - Holds an instance of a v23 service, and
+   Only one thread has a reference.
+
+
+*) model.go   Player inteface
+
+*) model.go:  Ball - just a simple object - has physics in it.
+    not a thread.
+
+*) model.go:  Game interface - Players, SendBall, Quit
+   This is held by the table, and it protect the table
+   from knowing about
+
+*) V23Manager - Holds an instance of a v23 service, and
    many client instances.
    Uses an authorizer, dispatcher and initializer.
    Accepts and emits data on channels.
    Has a thread which....
    Implementation of a GameManager interface.  Why?
 
-4) GameBuddy - the v23 service defined in player.vdl,
+*) V23Player - holds N client interface to some other player
+   Can send a ball to the other player.
+
+*) GameBuddy - the v23 service defined in player.vdl,
    held by V23Manager
    Defines Recognize, Forget, and Accept.
 
-5) server.go -- nameless implementation of GameBuddy
+*) server.go -- nameless implementation of GameBuddy
    impleements Recognize, Forget and Accept.
    Pulls stuff off the 'wire' and converts it into
    ptrs to objects with methods and sends them out
    on channels without blocking.
    An instance of this impl is passed to ifc.GameBuddeyServer
 
-6) model.go:  Ball, Player objects
 
-7) model.go:  Game interface - Players, SendBall, Quit
-
-8) table.go  Thing that knows the positions of all the
+*) table.go  Thing that knows the positions of all the
              balls, which walls are transparent, where
              to send the balls, etc.
 
