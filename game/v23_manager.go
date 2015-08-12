@@ -1,14 +1,14 @@
 // System and game logic.
 
-// An instance of GameManager is a peer to other instances on the net.
-// Each player will have one GameManager.
+// An instance of V23Manager is a peer to other instances on the net.
+// Each player will have one V23Manager.
 //
 // Each has an embedded V23 service, and is a direct client to the V23
 // services held by all the other instances.  It finds all the other
 // instances, figures out what it should call itself, and fires off
 // go routines to manage data coming in on various channels.
 //
-// The GameManager is presumably owned by whatever owns the UX event
+// The V23Manager is presumably owned by whatever owns the UX event
 // loop,
 //
 // During play, UX or underlying android/iOS events may trigger calls
