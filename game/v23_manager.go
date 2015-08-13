@@ -1,7 +1,6 @@
-// System and game logic.
-
-// An instance of V23Manager is a peer to other instances on the net.
-// Each player will have one V23Manager.
+// V23Manager is a peer to other instances of same on the net.
+//
+// Each device/game/program instance must have a V23Manager.
 //
 // Each has an embedded V23 service, and is a direct client to the V23
 // services held by all the other instances.  It finds all the other
@@ -39,22 +38,24 @@ func serverName(n int) string {
 	return rootName + fmt.Sprintf("%04d", n)
 }
 
+type vPlayer struct {
+	p *model.Player
+	c ifc.GameBuddyClientStub
+}
+
 type V23Manager struct {
 	ctx      *context.T
+	shutdown v23.Shutdown
 	myNumber int
-	players  []*model.Player
-	master   ifc.GameBuddyClientStub
+	players  []*vPlayer
 	chatty   bool
 
-	// V23Manager sends balls out on this channel.
-	chBall chan model.Ball
-
-	//chForget    chan model.Player
-	//chRecognize chan model.Player
+	chInRecognize chan *model.Player
+	chInForget    chan *model.Player
 
 	// Anyone holding this channel can tell V23Manager to shut down.
-	// Shutdown means close all outgoing channels, stop serving, and
-	// exit all go routines.
+	// Shutdown means close all outgoing channels, stop serving,
+	// exit all go routines, then reply on the passed channel.
 	chQuit <-chan chan bool
 }
 
@@ -62,7 +63,7 @@ func (gm *V23Manager) MyNumber() int {
 	return gm.myNumber
 }
 
-func NewV23Manager(ctx *context.T, chQuit <-chan chan bool) *V23Manager {
+func NewV23Manager(chQuit <-chan chan bool) *V23Manager {
 	ctx, shutdown := v23.Init()
 	if shutdown == nil {
 		log.Panic("Why is shutdown nil?")
@@ -70,26 +71,27 @@ func NewV23Manager(ctx *context.T, chQuit <-chan chan bool) *V23Manager {
 	//	defer shutdown()
 	//		<-signals.ShutdownOnSignals(ctx)
 	gm := &V23Manager{
-		ctx, 0, nil, true,
-		make(chan model.Ball),
-		// make(chan model.Player),
-		// make(chan model.Player),
+		ctx, shutdown, 0, []*vPlayer{}, true,
+		make(chan *model.Player),
+		make(chan *model.Player),
 		chQuit}
-	//gm.initialize()
 	return gm
 }
 
-func (gm *V23Manager) initialize() {
+func (gm *V23Manager) Initialize(chInBall chan<- *model.Ball) {
 	v23.GetNamespace(gm.ctx).SetRoots(namespaceRoot)
 
 	gm.myNumber = gm.playerCount()
 
-	// If there are no players, I register as player 1.  If there is one
-	// player already, I register as player 2, etc.
-	gm.registerService()
+	gm.registerService(chInBall)
+}
 
-	// No matter who I am, I am a client to server0.
-	gm.master = ifc.GameBuddyClient(serverName(0))
+func (gm *V23Manager) recognize(p *model.Player) {
+	vp := &vPlayer{
+		p,
+		ifc.GameBuddyClient(serverName(p.Id())),
+	}
+	gm.players = append(gm.players, vp)
 }
 
 // Scan mounttable for count of services matching "{rootName}*"
@@ -130,7 +132,7 @@ func (gm *V23Manager) run() {
 	}
 }
 
-func (gm *V23Manager) shutdown() {
+func (gm *V23Manager) quit() {
 	log.Println("closing all outgoing channels...")
 	log.Println("telling my clients to shutdown...")
 	log.Println("shutting down server...")
@@ -138,11 +140,14 @@ func (gm *V23Manager) shutdown() {
 }
 
 // Register a service in the namespace and begin serving.
-func (gm *V23Manager) registerService() {
+func (gm *V23Manager) registerService(chInBall chan<- *model.Ball) {
 	s := MakeServer(gm.ctx)
 	myName := serverName(gm.myNumber)
 	log.Printf("Calling myself %s\n", myName)
-	err := s.Serve(myName, ifc.GameBuddyServer(service.Make()), MakeAuthorizer())
+	err := s.Serve(
+		myName,
+		ifc.GameBuddyServer(service.Make(gm.chInRecognize, gm.chInForget, chInBall)),
+		MakeAuthorizer())
 	if err != nil {
 		log.Panic("Error serving service: ", err)
 	}
@@ -158,7 +163,7 @@ func findIndex(limit int, predicate func(i int) bool) int {
 }
 
 func (gm *V23Manager) removePlayer(p *model.Player) {
-	i := findIndex(len(gm.players), func(i int) bool { return gm.players[i].Id == p.Id })
+	i := findIndex(len(gm.players), func(i int) bool { return gm.players[i].p.Id() == p.Id() })
 	if i > -1 {
 		gm.players = append(gm.players[:i], gm.players[i+1:]...)
 	}

@@ -177,9 +177,11 @@ func (m *Master) doIt(
 func main() {
 	app.Main(func(a app.App) {
 
-		ch := make(chan bool)
+		chQuit := make(chan bool)
+		chBall := make(chan *model.Ball)
 
-		// managerImpl = game.NewV23Manager()
+		m := game.NewV23Manager(chQuit)
+		m.Initialize(chBall)
 		screen := screen.NewScreen()
 		// table := NewTable(managerImpl)
 

@@ -1,3 +1,8 @@
+// Relatively dumb V23 service that accepts VOM payloads, converts
+// them into game objects, and dumps them asynchronously (so as not to
+// block the network thread) onto various send-only channels.
+// Dumbness avoids the need v23-dependencies in tests.
+
 package service
 
 import (
