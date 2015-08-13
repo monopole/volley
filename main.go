@@ -73,6 +73,8 @@ Major objects are
 package main
 
 import (
+	"github.com/monopole/croupier/game"
+	"github.com/monopole/croupier/model"
 	"github.com/monopole/croupier/screen"
 	"golang.org/x/mobile/app"
 	"golang.org/x/mobile/event/config"
@@ -82,7 +84,7 @@ import (
 	"log"
 )
 
-type Master struct {
+type UserBuddy struct {
 	touchX float32
 	touchY float32
 	beginX float32
@@ -91,10 +93,16 @@ type Master struct {
 	iHaveTheCard bool
 }
 
-func (m *Master) doIt(
-	doneCh chan bool, a app.App, screen *screen.Screen) {
+func (ub *UserBuddy) quit(chChQuit chan chan bool) {
+	chQuit := make(chan bool)
+	chChQuit <- chQuit
+	<-chQuit
+}
+
+func (ub *UserBuddy) doIt(
+	chChQuit chan chan bool, a app.App, screen *screen.Screen) {
 	// The server initializes with player '0' holding the card.
-	m.iHaveTheCard = true
+	ub.iHaveTheCard = true
 
 	log.Printf("Hi there.\n")
 
@@ -110,11 +118,11 @@ func (m *Master) doIt(
 			case lifecycle.CrossOff:
 				log.Printf("Shutting Down!\n")
 				screen.Stop()
-				doneCh <- true
+				ub.quit(chChQuit)
 				return
 			}
 		case paint.Event:
-			screen.Paint(c, m.iHaveTheCard, m.touchX, m.touchY)
+			screen.Paint(c, ub.iHaveTheCard, ub.touchX, ub.touchY)
 			a.EndPaint(e)
 		case touch.Event:
 			// if e.Type == touch.TypeEnd && iHaveTheCard {
@@ -130,12 +138,12 @@ func (m *Master) doIt(
 			case touch.TypeBegin:
 				grabbingVector = true
 				log.Printf("Begin.\n")
-				m.beginX = e.X
-				m.beginY = e.Y
+				ub.beginX = e.X
+				ub.beginY = e.Y
 				if e.X < 10 && e.Y < 10 {
 					log.Printf("Shutting Down!\n")
 					screen.Stop()
-					doneCh <- true
+					ub.quit(chChQuit)
 					return
 				}
 			case touch.TypeMove:
@@ -146,9 +154,9 @@ func (m *Master) doIt(
 				}
 				grabbingVector = false
 				log.Printf("Done\n")
-				log.Printf("  begin = (%v, %v)\n", m.beginX, m.beginY)
+				log.Printf("  begin = (%v, %v)\n", ub.beginX, ub.beginY)
 				log.Printf("    end = (%v, %v)\n", e.X, e.Y)
-				log.Printf("  delta = (%v, %v)\n", e.X-m.beginX, e.Y-m.beginY)
+				log.Printf("  delta = (%v, %v)\n", e.X-ub.beginX, e.Y-ub.beginY)
 				/*
 						On X11, screen points come in as some kind of pixels.
 						As the screen is resized, 0,0 stays the same,
@@ -167,8 +175,8 @@ func (m *Master) doIt(
 			//   e.X  <= c.WidthPx
 			//   e.Y  <= c.HeightPx
 			log.Printf(" config = (%v, %v)\n", c.WidthPx, c.HeightPx)
-			m.touchX = float32(c.WidthPx / 2)
-			m.touchY = float32(c.HeightPx / 2)
+			ub.touchX = float32(c.WidthPx / 2)
+			ub.touchY = float32(c.HeightPx / 2)
 			// gm.SetOrigin(touchX, touchY)
 		}
 	}
@@ -177,17 +185,17 @@ func (m *Master) doIt(
 func main() {
 	app.Main(func(a app.App) {
 
-		chQuit := make(chan bool)
+		chChQuit := make(chan chan bool)
 		chBall := make(chan *model.Ball)
 
-		m := game.NewV23Manager(chQuit)
-		m.Initialize(chBall)
+		gm := game.NewV23Manager(chChQuit)
+		gm.Initialize(chBall)
 		screen := screen.NewScreen()
 		// table := NewTable(managerImpl)
 
-		m := &Master{}
-		go m.doIt(ch, a, screen)
-		<-ch
+		ub := &UserBuddy{}
+		go ub.doIt(chChQuit, a, screen)
+		select {}
 
 	})
 }

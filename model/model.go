@@ -35,12 +35,17 @@ type Ball struct {
 	dy float32
 }
 
-func NewBall(owner *Player, px float32, py float32, dx float32, dy float32) *Ball {
+func NewBall(
+	owner *Player,
+	px float32, py float32,
+	dx float32, dy float32) *Ball {
 	return &Ball{owner, px, py, dx, dy}
 }
 
 func (b *Ball) String() string {
-	return fmt.Sprintf("(%v p{%v, %v} v{%v, %v})", b.owner, b.px, b.py, b.dx, b.dy)
+	return fmt.Sprintf(
+		"(%v p{%v, %v} v{%v, %v})",
+		b.owner, b.px, b.py, b.dx, b.dy)
 }
 
 func (b *Ball) Owner() *Player {

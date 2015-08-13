@@ -32,7 +32,9 @@ import (
 )
 
 const rootName = "croupier/player"
-const namespaceRoot = "/104.197.96.113:3389"
+
+// const namespaceRoot = "/104.197.96.113:3389"
+const namespaceRoot = "/172.17.166.64:23000"
 
 func serverName(n int) string {
 	return rootName + fmt.Sprintf("%04d", n)
@@ -79,19 +81,67 @@ func NewV23Manager(chQuit <-chan chan bool) *V23Manager {
 }
 
 func (gm *V23Manager) Initialize(chInBall chan<- *model.Ball) {
+	if gm.chatty {
+		log.Printf("Scanning namespace %v\n", namespaceRoot)
+	}
 	v23.GetNamespace(gm.ctx).SetRoots(namespaceRoot)
 
 	gm.myNumber = gm.playerCount()
-
+	if gm.chatty {
+		log.Printf("My number is %d\n", gm.myNumber)
+	}
 	gm.registerService(chInBall)
 }
 
-func (gm *V23Manager) recognize(p *model.Player) {
-	vp := &vPlayer{
-		p,
-		ifc.GameBuddyClient(serverName(p.Id())),
+func (gm *V23Manager) Run() {
+	for {
+		select {
+		case ch := <-gm.chQuit:
+			gm.quit()
+			ch <- true
+			return
+		case p := <-gm.chInRecognize:
+			gm.recognize(p)
+		case p := <-gm.chInForget:
+			gm.forget(p)
+		}
 	}
+}
+
+func (gm *V23Manager) quit() {
+	if gm.chatty {
+		log.Println("shutting down v23 server...")
+	}
+	gm.shutdown()
+
+	if gm.chatty {
+		log.Println("closing all outgoing channels...")
+		log.Println("telling my clients to shutdown...")
+		log.Println("all Done...")
+	}
+}
+
+func (gm *V23Manager) recognize(p *model.Player) {
+	if gm.chatty {
+		log.Printf("Recognizing %v\n.", p)
+	}
+	vp := &vPlayer{p, ifc.GameBuddyClient(serverName(p.Id()))}
 	gm.players = append(gm.players, vp)
+}
+
+func (gm *V23Manager) forget(p *model.Player) {
+	i := findIndex(len(gm.players),
+		func(i int) bool { return gm.players[i].p.Id() == p.Id() })
+	if i > -1 {
+		if gm.chatty {
+			log.Printf("Forgetting %v\n.", p)
+		}
+		gm.players = append(gm.players[:i], gm.players[i+1:]...)
+	} else {
+		if gm.chatty {
+			log.Printf("Asked to forget %v, but don't know him\n.", p)
+		}
+	}
 }
 
 // Scan mounttable for count of services matching "{rootName}*"
@@ -112,7 +162,7 @@ func (gm *V23Manager) playerCount() (count int) {
 			if v.Value.Name != "" {
 				count++
 				if gm.chatty {
-					log.Println(v.Value.Name)
+					log.Println("Found player: ", v.Value.Name)
 				}
 			}
 		default:
@@ -121,32 +171,17 @@ func (gm *V23Manager) playerCount() (count int) {
 	return
 }
 
-func (gm *V23Manager) run() {
-	for {
-		select {
-		case ch := <-gm.chQuit:
-			gm.shutdown()
-			ch <- true
-			return
-		}
-	}
-}
-
-func (gm *V23Manager) quit() {
-	log.Println("closing all outgoing channels...")
-	log.Println("telling my clients to shutdown...")
-	log.Println("shutting down server...")
-	log.Println("all Done...")
-}
-
 // Register a service in the namespace and begin serving.
 func (gm *V23Manager) registerService(chInBall chan<- *model.Ball) {
 	s := MakeServer(gm.ctx)
 	myName := serverName(gm.myNumber)
-	log.Printf("Calling myself %s\n", myName)
+	if gm.chatty {
+		log.Printf("Calling myself %s\n", myName)
+	}
 	err := s.Serve(
 		myName,
-		ifc.GameBuddyServer(service.Make(gm.chInRecognize, gm.chInForget, chInBall)),
+		ifc.GameBuddyServer(
+			service.Make(gm.chInRecognize, gm.chInForget, chInBall)),
 		MakeAuthorizer())
 	if err != nil {
 		log.Panic("Error serving service: ", err)
@@ -160,13 +195,6 @@ func findIndex(limit int, predicate func(i int) bool) int {
 		}
 	}
 	return -1
-}
-
-func (gm *V23Manager) removePlayer(p *model.Player) {
-	i := findIndex(len(gm.players), func(i int) bool { return gm.players[i].p.Id() == p.Id() })
-	if i > -1 {
-		gm.players = append(gm.players[:i], gm.players[i+1:]...)
-	}
 }
 
 func (gm *V23Manager) WhoHasTheCard() int {
