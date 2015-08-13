@@ -1,19 +1,14 @@
 // V23Manager is a peer to other instances of same on the net.
 //
-// Each device/game/program instance must have a V23Manager.
+// Each device/game/program instance must have one V23Manager.
 //
 // Each has an embedded V23 service, and is a direct client to the V23
-// services held by all the other instances.  It finds all the other
-// instances, figures out what it should call itself, and fires off
-// go routines to manage data coming in on various channels.
+// services held by all the other instances.
 //
-// The V23Manager is presumably owned by whatever owns the UX event
-// loop,
-//
-// During play, UX or underlying android/iOS events may trigger calls
-// to other V23 services, Likewise, an incoming RPC may change data
-// held by the manager, to ultimately impact the UX (e.g. a card is
-// passed in by another player).
+// On startup, the manager finds all the other instances via a
+// mounttable, figures out what it should call itself, and fires off
+// go routines to manage data coming in on various channels, and
+// establishes contact with the other players.
 
 package game
 
@@ -47,14 +42,13 @@ type V23Manager struct {
 	myNumber      int
 	players       []*vPlayer
 	chatty        bool
-
 	chInRecognize chan *model.Player
 	chInForget    chan *model.Player
+	chQuit        chan chan bool
+}
 
-	// Anyone holding this channel can tell V23Manager to shut down.
-	// Shutdown means close all outgoing channels, stop serving,
-	// exit all go routines, then reply on the passed channel.
-	chQuit <-chan chan bool
+func (gm *V23Manager) Quitter() chan<- chan bool {
+	return gm.chQuit
 }
 
 func (gm *V23Manager) MyNumber() int {
@@ -66,21 +60,17 @@ func (gm *V23Manager) serverName(n int) string {
 }
 
 func NewV23Manager(
-	rootName string, namespaceRoot string,
-	chQuit <-chan chan bool) *V23Manager {
+	rootName string, namespaceRoot string) *V23Manager {
 	ctx, shutdown := v23.Init()
 	if shutdown == nil {
 		log.Panic("Why is shutdown nil?")
 	}
-	//	defer shutdown()
-	//		<-signals.ShutdownOnSignals(ctx)
-	gm := &V23Manager{
+	return &V23Manager{
 		ctx, shutdown, rootName, namespaceRoot,
 		0, []*vPlayer{}, true,
 		make(chan *model.Player),
 		make(chan *model.Player),
-		chQuit}
-	return gm
+		make(chan chan bool)}
 }
 
 func (gm *V23Manager) Initialize(chInBall chan<- *model.Ball) {
@@ -98,7 +88,7 @@ func (gm *V23Manager) Initialize(chInBall chan<- *model.Ball) {
 	if gm.chatty {
 		log.Printf("My number is %d\n", gm.myNumber)
 	}
-	gm.registerService(chInBall)
+	gm.registerAndServe(chInBall)
 	for _, id := range numbers {
 		gm.recognize(model.NewPlayer(id))
 	}
@@ -107,35 +97,36 @@ func (gm *V23Manager) Initialize(chInBall chan<- *model.Ball) {
 
 func (gm *V23Manager) recognize(p *model.Player) {
 	if gm.chatty {
-		log.Printf("Recognizing %v\n.", p)
+		log.Printf("%d recognizing %v.", gm.MyNumber(), p)
 	}
 	vp := &vPlayer{p, ifc.GameBuddyClient(gm.serverName(p.Id()))}
 	gm.players = append(gm.players, vp)
 }
 
 func (gm *V23Manager) sayHelloToEveryone() {
+	wp := ifc.Player{int32(gm.MyNumber())}
 	for _, vp := range gm.players {
 		if gm.chatty {
-			log.Printf("Saying hello to %v\n", vp.p)
+			log.Printf("Asking %v to recognize %v\n", vp.p, gm.MyNumber())
 		}
-		wp := ifc.Player{int32(vp.p.Id())}
-		if err := vp.c.Recognize(gm.ctx, wp, options.SkipServerEndpointAuthorization{}); err != nil {
-			log.Panic("Hello failed.")
+		if err := vp.c.Recognize(
+			gm.ctx, wp, options.SkipServerEndpointAuthorization{}); err != nil {
+			log.Panic("Recognize failed.")
 		}
 	}
 }
 
-// Modify the game state, and send it to all players, starting with the
-// player that's gonna get the card.
-func (gm *V23Manager) PassTheCard() {
-	if gm.chatty {
-		log.Printf("Sending to %v\n", gm.serverName(gm.myNumber)+" "+time.Now().String())
+func (gm *V23Manager) sayGoodbyeToEveryone() {
+	wp := ifc.Player{int32(gm.MyNumber())}
+	for _, vp := range gm.players {
+		if gm.chatty {
+			log.Printf("Asking %v to forget %v\n", vp.p, gm.MyNumber())
+		}
+		if err := vp.c.Forget(
+			gm.ctx, wp, options.SkipServerEndpointAuthorization{}); err != nil {
+			log.Panic("Forget failed.")
+		}
 	}
-	//	if err := gm.master.SendCardTo(gm.ctx, int32((gm.myNumber+1)%expectedInstances),
-	//		options.SkipServerEndpointAuthorization{}); err != nil {
-	//		log.Printf("error sending card: %v\n", err)
-	//	}
-	log.Printf("where i would have sent the card.\n")
 }
 
 func (gm *V23Manager) forget(p *model.Player) {
@@ -143,7 +134,7 @@ func (gm *V23Manager) forget(p *model.Player) {
 		func(i int) bool { return gm.players[i].p.Id() == p.Id() })
 	if i > -1 {
 		if gm.chatty {
-			log.Printf("Forgetting %v\n.", p)
+			log.Printf("%d forgetting %v.\n", gm.MyNumber(), p)
 		}
 		gm.players = append(gm.players[:i], gm.players[i+1:]...)
 	} else {
@@ -153,11 +144,7 @@ func (gm *V23Manager) forget(p *model.Player) {
 	}
 }
 
-func (gm *V23Manager) playerCount() int {
-	return 0
-}
-
-// Return sorted array of known players.
+// Return array of known players.
 func (gm *V23Manager) playerNumbers() (list []int) {
 	list = []int{}
 	rCtx, cancel := context.WithTimeout(gm.ctx, time.Minute)
@@ -191,8 +178,7 @@ func (gm *V23Manager) playerNumbers() (list []int) {
 	return
 }
 
-// Register a service in the namespace and begin serving.
-func (gm *V23Manager) registerService(chInBall chan<- *model.Ball) {
+func (gm *V23Manager) registerAndServe(chInBall chan<- *model.Ball) {
 	s := MakeServer(gm.ctx)
 	myName := gm.serverName(gm.myNumber)
 	if gm.chatty {
@@ -218,6 +204,9 @@ func findIndex(limit int, predicate func(i int) bool) int {
 }
 
 func (gm *V23Manager) Run() {
+	if gm.chatty {
+		log.Println("Running.")
+	}
 	for {
 		select {
 		case ch := <-gm.chQuit:
@@ -234,13 +223,14 @@ func (gm *V23Manager) Run() {
 
 func (gm *V23Manager) quit() {
 	if gm.chatty {
-		log.Println("shutting down v23 server...")
+		log.Println("Saying goodbye.")
+	}
+	gm.sayGoodbyeToEveryone()
+	if gm.chatty {
+		log.Println("Shutting down v23 runtime...")
 	}
 	gm.shutdown()
-
 	if gm.chatty {
-		log.Println("closing all outgoing channels...")
-		log.Println("telling my clients to shutdown...")
-		log.Println("all Done...")
+		log.Println("Manager done.")
 	}
 }

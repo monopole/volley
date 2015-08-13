@@ -10,7 +10,7 @@ import (
 	"github.com/monopole/croupier/game"
 	"github.com/monopole/croupier/model"
 	"log"
-	//	"time"
+	"time"
 )
 
 const rootName = "croupier/player"
@@ -21,18 +21,25 @@ const namespaceRoot = "/localhost:23000"
 
 func main() {
 
-	chChQuit := make(chan chan bool)
-
-	gm := game.NewV23Manager(rootName, namespaceRoot, chChQuit)
+	gm := game.NewV23Manager(rootName, namespaceRoot)
 
 	log.Println("Initializing game")
 
 	chBall := make(chan *model.Ball)
 	gm.Initialize(chBall)
-	select {}
-	//	go gm.Run()
-	//	for i := 10; i < 17; i++ {
-	//		<-time.After(3 * time.Second)
-	//		chBall <- model.NewBall(model.NewPlayer(i), 1, 2, 3, 4)
-	//	}
+	go gm.Run()
+
+	delta := 5
+	timeStep := time.Duration(delta) * time.Second
+	for i := 6; i > 0; i-- {
+		log.Printf("%d seconds left...\n", i*delta)
+		<-time.After(timeStep)
+	}
+
+	log.Println("Sending quit.")
+	ch := make(chan bool)
+	gm.Quitter() <- ch
+	<-ch
+
+	log.Println("All done.")
 }
