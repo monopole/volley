@@ -112,6 +112,13 @@ GOPATH=$VEGGIE go install v.io/x/ref/services/agent/...
 GOPATH=$VEGGIE go install v.io/x/ref/services/mounttable/...
 ```
 
+## Install supplemental GL libs for ubuntu
+
+See notes [here](https://github.com/golang/mobile/blob/master/app/x11.go#L15).
+```
+sudo apt-get install libegl1-mesa-dev libgles2-mesa-dev libx11-dev
+```
+
 ## Install Go mobile stuff
 
 ```

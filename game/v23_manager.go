@@ -51,13 +51,13 @@ func NewV23Manager(
 	rootName string, namespaceRoot string) *V23Manager {
 	ctx, shutdown := v23.Init()
 	if shutdown == nil {
-		log.Panic("Why is shutdown nil?")
+		log.Panic("shutdown nil")
 	}
 	return &V23Manager{
 		ctx, shutdown,
 		rootName, namespaceRoot,
 		nil, []*vPlayer{}, true,
-		make(chan *model.Player),
+		make(chan *modelPlayer),
 		make(chan *model.Player),
 		make(chan chan bool)}
 }
@@ -206,7 +206,7 @@ func findIndex(limit int, predicate func(i int) bool) int {
 
 func (gm *V23Manager) Run() {
 	if gm.chatty {
-		log.Println("Running.")
+		log.Println("V23 Running.")
 	}
 	for {
 		select {
@@ -228,7 +228,7 @@ func (gm *V23Manager) quit() {
 	}
 	gm.sayGoodbyeToEveryone()
 	if gm.chatty {
-		log.Println("Shutting down v23 runtime...")
+		log.Println("Shutting down v23 runtime.")
 	}
 	gm.shutdown()
 	if gm.chatty {

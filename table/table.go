@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/monopole/croupier/model"
 	"github.com/monopole/croupier/screen"
+	"log"
 )
 
 type commandType int
@@ -18,12 +19,14 @@ const (
 
 type Table struct {
 	me              *model.Player
+	chatty          bool
 	screen          *screen.Screen
 	commands        <-chan commandType
 	chImpulse       <-chan *model.Ball
 	chBallEnter     <-chan *model.Ball
 	chBallExitLeft  chan<- *model.Ball
 	chBallExitRight chan<- *model.Ball
+	chQuit          chan chan bool
 	balls           []*model.Ball
 }
 
@@ -36,9 +39,15 @@ func NewTable(
 	chBallExitLeft chan<- *model.Ball,
 	chBallExitRight chan<- *model.Ball,
 ) *Table {
-	return &Table{me, s,
-		commands, chImpulse, chBallEnter, chBallExitLeft, chBallExitRight,
+	return &Table{me, true, s,
+		commands,
+		chImpulse, chBallEnter, chBallExitLeft, chBallExitRight,
+		make(chan chan bool),
 		[]*model.Ball{model.NewBall(me, model.Vec{0, 0}, model.Vec{0, 0})}}
+}
+
+func (table *Table) Quitter() chan<- chan bool {
+	return table.chQuit
 }
 
 func (table *Table) String() string {
@@ -48,6 +57,10 @@ func (table *Table) String() string {
 func (table *Table) play() {
 	for {
 		select {
+		case ch := <-table.chQuit:
+			table.quit()
+			ch <- true
+			return
 		case c := <-table.commands:
 			switch c {
 			case commandRandomImpulse:
@@ -61,8 +74,8 @@ func (table *Table) play() {
 		case b := <-table.chBallEnter:
 			table.balls = append(table.balls, b)
 		case impulse := <-table.chImpulse:
-			// Find the ball closest to the impulse,
-			// apply the new velocity to the ball.
+			// Find the ball closest to the impulse and within a reasonable range,
+			// apply new velocity to the ball.
 			// For now, just pick the zero ball.
 			if len(table.balls) > 0 {
 				b := table.balls[0]
@@ -72,5 +85,8 @@ func (table *Table) play() {
 	}
 }
 
-func (table *Table) Quit() {
+func (table *Table) quit() {
+	if table.chatty {
+		log.Println("Table quitting.")
+	}
 }
