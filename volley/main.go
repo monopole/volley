@@ -27,8 +27,7 @@ func main() {
 		log.Println("Starting.")
 
 		gm := game.NewV23Manager(rootName, namespaceRoot)
-		chBall := make(chan *model.Ball)
-		gm.Initialize(chBall)
+		gm.Initialize()
 		go gm.Run()
 		chChQuit := gm.Quitter()
 

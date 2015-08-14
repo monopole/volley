@@ -39,11 +39,10 @@ type V23Manager struct {
 	shutdown      v23.Shutdown
 	rootName      string
 	namespaceRoot string
+	relay         *service.Relay
+	chatty        bool
 	me            *model.Player
 	players       []*vPlayer
-	chatty        bool
-	chInRecognize chan *model.Player
-	chInForget    chan *model.Player
 	chQuit        chan chan bool
 }
 
@@ -56,17 +55,17 @@ func NewV23Manager(
 	return &V23Manager{
 		ctx, shutdown,
 		rootName, namespaceRoot,
-		nil, []*vPlayer{}, true,
-		make(chan *modelPlayer),
-		make(chan *model.Player),
-		make(chan chan bool)}
+		nil, true, nil, []*vPlayer{},
+		make(chan chan bool),
+	}
 }
 
-func (gm *V23Manager) Initialize(chInBall chan<- *model.Ball) {
+func (gm *V23Manager) Initialize() {
 	if gm.chatty {
 		log.Printf("Scanning namespace %v\n", gm.namespaceRoot)
 	}
 	v23.GetNamespace(gm.ctx).SetRoots(gm.namespaceRoot)
+
 	numbers := gm.playerNumbers()
 	sort.Ints(numbers)
 	myId := 1
@@ -77,7 +76,21 @@ func (gm *V23Manager) Initialize(chInBall chan<- *model.Ball) {
 	if gm.chatty {
 		log.Printf("I am %v\n", gm.me)
 	}
-	gm.registerAndServe(chInBall)
+
+	s := MakeServer(gm.ctx)
+	myName := gm.serverName(gm.Me().Id())
+	if gm.chatty {
+		log.Printf("Calling myself %s\n", myName)
+	}
+	gm.relay = service.MakeRelay()
+	err := s.Serve(
+		myName,
+		ifc.GameBuddyServer(gm.relay),
+		MakeAuthorizer())
+	if err != nil {
+		log.Panic("Error serving service: ", err)
+	}
+
 	for _, id := range numbers {
 		gm.recognize(model.NewPlayer(id))
 	}
@@ -86,6 +99,10 @@ func (gm *V23Manager) Initialize(chInBall chan<- *model.Ball) {
 
 func (gm *V23Manager) Quitter() chan<- chan bool {
 	return gm.chQuit
+}
+
+func (gm *V23Manager) chIncomingBall() <-chan *model.Ball {
+	return gm.relay.ChBall()
 }
 
 func (gm *V23Manager) Me() *model.Player {
@@ -118,6 +135,9 @@ func (gm *V23Manager) sayHelloToEveryone() {
 }
 
 func (gm *V23Manager) sayGoodbyeToEveryone() {
+	if gm.chatty {
+		log.Println("Saying goodbye to other players.")
+	}
 	wp := ifc.Player{int32(gm.Me().Id())}
 	for _, vp := range gm.players {
 		if gm.chatty {
@@ -135,7 +155,7 @@ func (gm *V23Manager) forget(p *model.Player) {
 		func(i int) bool { return gm.players[i].p.Id() == p.Id() })
 	if i > -1 {
 		if gm.chatty {
-			log.Printf("%d forgetting %v.\n", gm.Me(), p)
+			log.Printf("%v forgetting %v.\n", gm.Me(), p)
 		}
 		gm.players = append(gm.players[:i], gm.players[i+1:]...)
 	} else {
@@ -179,22 +199,6 @@ func (gm *V23Manager) playerNumbers() (list []int) {
 	return
 }
 
-func (gm *V23Manager) registerAndServe(chInBall chan<- *model.Ball) {
-	s := MakeServer(gm.ctx)
-	myName := gm.serverName(gm.Me().Id())
-	if gm.chatty {
-		log.Printf("Calling myself %s\n", myName)
-	}
-	err := s.Serve(
-		myName,
-		ifc.GameBuddyServer(
-			service.Make(gm.chInRecognize, gm.chInForget, chInBall)),
-		MakeAuthorizer())
-	if err != nil {
-		log.Panic("Error serving service: ", err)
-	}
-}
-
 func findIndex(limit int, predicate func(i int) bool) int {
 	for i := 0; i < limit; i++ {
 		if predicate(i) {
@@ -214,25 +218,25 @@ func (gm *V23Manager) Run() {
 			gm.quit()
 			ch <- true
 			return
-		case p := <-gm.chInRecognize:
+		case p := <-gm.relay.ChRecognize():
 			gm.recognize(p)
-		case p := <-gm.chInForget:
+		case p := <-gm.relay.ChForget():
 			gm.forget(p)
 		}
 	}
 }
 
 func (gm *V23Manager) quit() {
-	if gm.chatty {
-		log.Println("Saying goodbye.")
-	}
 	gm.sayGoodbyeToEveryone()
 	if gm.chatty {
 		log.Println("Shutting down v23 runtime.")
 	}
 	gm.shutdown()
 	if gm.chatty {
-		log.Println("Manager done.")
+		log.Println("v23 runttime done.")
 	}
-	// TODO: close all outgoing channels (chan<-) that i own.
+	gm.relay.Close()
+	if gm.chatty {
+		log.Println("Relay closed.")
+	}
 }

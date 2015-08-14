@@ -1,6 +1,6 @@
 // Relatively dumb V23 service that accepts VOM payloads, converts
 // them into game objects, and dumps them asynchronously (so as not to
-// block the network thread) onto various send-only channels.
+// block the network thread) onto various receive-only channels.
 // Dumbness avoids the need v23-dependencies in tests.
 
 package service
@@ -12,25 +12,48 @@ import (
 	"v.io/v23/rpc"
 )
 
-type impl struct {
-	chRecognize chan<- *model.Player
-	chForget    chan<- *model.Player
-	chBall      chan<- *model.Ball
+type Relay struct {
+	chRecognize chan *model.Player
+	chForget    chan *model.Player
+	chBall      chan *model.Ball
 }
 
-func Make(
-	chRecognize chan<- *model.Player,
-	chForget chan<- *model.Player,
-	chBall chan<- *model.Ball,
-) ifc.GameBuddyServerMethods {
-	return &impl{
-		chRecognize: chRecognize,
-		chForget:    chForget,
-		chBall:      chBall,
-	}
+func MakeRelay() *Relay {
+	return &Relay{
+		make(chan *model.Player),
+		make(chan *model.Player),
+		make(chan *model.Ball)}
 }
 
-func (x *impl) Recognize(_ *context.T, _ rpc.ServerCall, p ifc.Player) error {
+// Don't call this until after someone calls v23.shutdown, or incoming
+// RPC's will attempt to write to closed channels.  Calling this will
+// presumably unblock anything waiting for, say, a new Ball.
+//
+// With some extra work and a mutex member, we could add a more
+// complex lifecycle to turn off the relay and turn it back on at
+// will, to support leaving and re-entering the game without losing
+// one's number, name, and place in the mount table.  If off mode,
+// data from incoming RPC's would just get dropped on the floor
+// instead of placed on the channel.
+func (x *Relay) Close() {
+	close(x.chRecognize)
+	close(x.chForget)
+	close(x.chBall)
+}
+
+func (x *Relay) ChRecognize() <-chan *model.Player {
+	return x.chRecognize
+}
+
+func (x *Relay) ChForget() <-chan *model.Player {
+	return x.chForget
+}
+
+func (x *Relay) ChBall() <-chan *model.Ball {
+	return x.chBall
+}
+
+func (x *Relay) Recognize(_ *context.T, _ rpc.ServerCall, p ifc.Player) error {
 	player := model.NewPlayer(int(p.Id))
 	go func() {
 		x.chRecognize <- player
@@ -38,7 +61,7 @@ func (x *impl) Recognize(_ *context.T, _ rpc.ServerCall, p ifc.Player) error {
 	return nil
 }
 
-func (x *impl) Forget(_ *context.T, _ rpc.ServerCall, p ifc.Player) error {
+func (x *Relay) Forget(_ *context.T, _ rpc.ServerCall, p ifc.Player) error {
 	player := model.NewPlayer(int(p.Id))
 	go func() {
 		x.chForget <- player
@@ -46,7 +69,7 @@ func (x *impl) Forget(_ *context.T, _ rpc.ServerCall, p ifc.Player) error {
 	return nil
 }
 
-func (x *impl) Accept(_ *context.T, _ rpc.ServerCall, b ifc.Ball) error {
+func (x *Relay) Accept(_ *context.T, _ rpc.ServerCall, b ifc.Ball) error {
 	player := model.NewPlayer(int(b.Owner.Id))
 	ball := model.NewBall(
 		player,

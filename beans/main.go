@@ -8,7 +8,6 @@ package main
 
 import (
 	"github.com/monopole/croupier/game"
-	"github.com/monopole/croupier/model"
 	"log"
 	"time"
 )
@@ -24,9 +23,7 @@ func main() {
 	gm := game.NewV23Manager(rootName, namespaceRoot)
 
 	log.Println("Initializing game")
-
-	chBall := make(chan *model.Ball)
-	gm.Initialize(chBall)
+	gm.Initialize()
 	go gm.Run()
 
 	delta := 5
