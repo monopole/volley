@@ -95,12 +95,14 @@ func main() {
 
 		chChQuit := gm.Quitter()
 
-		table := NewTable(managerImpl)
+		table := table.NewTable(
+			gm.Me(),
+			screen.NewScreen(),
+			nil, nil, nil, nil,
+		)
 
-		screen := screen.NewScreen()
-
-		interpreter := &interpreter.Interpreter{}
-		go interpreter.doIt(chChQuit, a, screen)
+		//		interpreter := &interpreter.Interpreter{}
+		//	go interpreter.doIt(chChQuit, a, screen)
 
 		delta := 5
 		timeStep := time.Duration(delta) * time.Second

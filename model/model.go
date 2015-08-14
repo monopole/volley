@@ -68,6 +68,10 @@ func (b *Ball) SetPos(x float32, y float32) {
 	b.p = Vec{x, y}
 }
 
+func (b *Ball) SetVel(x float32, y float32) {
+	b.v = Vec{x, y}
+}
+
 // Interface to other game players on the net.
 //
 // An implementation of this interface will initialize a runtime

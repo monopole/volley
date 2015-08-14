@@ -4,7 +4,8 @@ package screen
 
 import (
 	"encoding/binary"
-	"golang.org/x/mobile/event/size"
+	"github.com/monopole/croupier/model"
+	// "golang.org/x/mobile/event/size"
 	//	"golang.org/x/mobile/exp/app/debug"
 	"golang.org/x/mobile/exp/f32"
 	"golang.org/x/mobile/exp/gl/glutil"
@@ -22,6 +23,8 @@ type Screen struct {
 	red      float32
 	blue     float32
 	gray     float32
+	width    float32
+	height   float32
 }
 
 func NewScreen() *Screen {
@@ -32,7 +35,7 @@ func NewScreen() *Screen {
 func (s *Screen) Start() {
 	var err error
 
-	s.red = 0.3
+	s.red = 0.8
 	s.green = 0.8
 	s.blue = 0.4
 
@@ -54,13 +57,13 @@ func (s *Screen) Start() {
 	// Can this be an app.RegisterFilter call now??
 }
 
-func (s *Screen) Paint(
-	sz size.Event, iHaveTheCard bool, touchX float32, touchY float32) {
-	if iHaveTheCard {
-		s.red = 0.8
-	} else {
-		s.red = 0.4
-	}
+func (s *Screen) ReSize(width float32, height float32) {
+	s.width = width   // touchX/float32(sz.WidthPx),
+	s.height = height // where sz is size.Event
+}
+
+func (s *Screen) Paint(balls []*model.Ball) {
+
 	gl.ClearColor(s.red, s.green, s.blue, 1)
 	gl.Clear(gl.COLOR_BUFFER_BIT)
 
@@ -72,18 +75,17 @@ func (s *Screen) Paint(
 	}
 	// Color the triangle
 	gl.Uniform4f(s.color, s.gray, 0, s.gray, 1)
+
 	// Move the triangle
-	gl.Uniform2f(
-		s.offset,
-		touchX/float32(sz.WidthPx),
-		touchY/float32(sz.HeightPx))
+	b := balls[0]
+	gl.Uniform2f(s.offset, b.GetPos().X/s.width, b.GetPos().Y/s.height)
 
 	gl.BindBuffer(gl.ARRAY_BUFFER, s.buf)
 	gl.EnableVertexAttribArray(s.position)
 	gl.VertexAttribPointer(s.position, coordsPerVertex, gl.FLOAT, false, 0, 0)
-	if iHaveTheCard {
-		gl.DrawArrays(gl.TRIANGLES, 0, vertexCount)
-	}
+	// if iHaveTheCard {
+	gl.DrawArrays(gl.TRIANGLES, 0, vertexCount)
+
 	gl.DisableVertexAttribArray(s.position)
 
 	// debug.DrawFPS(c)

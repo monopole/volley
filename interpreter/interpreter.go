@@ -48,7 +48,7 @@ func (ub *Interpreter) doIt(
 				return
 			}
 		case paint.Event:
-			screen.Paint(sz, ub.iHaveTheCard, ub.touchX, ub.touchY)
+			// screen.Paint(sz, ub.iHaveTheCard, ub.touchX, ub.touchY)
 			a.EndPaint(e)
 		case touch.Event:
 			// if e.Type == touch.TypeEnd && iHaveTheCard {
