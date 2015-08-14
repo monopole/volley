@@ -5,6 +5,15 @@ import (
 	"strconv"
 )
 
+type Vec struct {
+	X float32
+	Y float32
+}
+
+func (v *Vec) String() string {
+	return fmt.Sprintf("{%v, %v}", v.X, v.Y)
+}
+
 type Player struct {
 	id int
 }
@@ -27,42 +36,36 @@ const (
 
 type Ball struct {
 	owner *Player
-	// Position
-	px float32
-	py float32
-	// Velocity
-	dx float32
-	dy float32
+	p     Vec
+	v     Vec
 }
 
 func NewBall(
 	owner *Player,
-	px float32, py float32,
-	dx float32, dy float32) *Ball {
-	return &Ball{owner, px, py, dx, dy}
+	p Vec, v Vec) *Ball {
+	return &Ball{owner, p, v}
 }
 
 func (b *Ball) String() string {
 	return fmt.Sprintf(
-		"(%v p{%v, %v} v{%v, %v})",
-		b.owner, b.px, b.py, b.dx, b.dy)
+		"(%v p%v v%v)",
+		b.owner, b.p, b.v)
 }
 
 func (b *Ball) Owner() *Player {
 	return b.owner
 }
 
-func (b *Ball) GetPos() (float32, float32) {
-	return b.px, b.py
+func (b *Ball) GetPos() Vec {
+	return b.p
 }
 
-func (b *Ball) GetVelocity() (float32, float32) {
-	return b.dx, b.dy
+func (b *Ball) GetVel() Vec {
+	return b.v
 }
 
 func (b *Ball) SetPos(x float32, y float32) {
-	b.px = x
-	b.py = y
+	b.p = Vec{x, y}
 }
 
 // Interface to other game players on the net.

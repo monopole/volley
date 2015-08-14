@@ -3,6 +3,7 @@ package table
 import (
 	"fmt"
 	"github.com/monopole/croupier/model"
+	"log"
 )
 
 type commandType int
@@ -15,63 +16,46 @@ const (
 )
 
 type Table struct {
-	me           *model.Player
-	balls        []*model.Ball
-	players      []*model.Player
-	quitting     chan bool
-	isDone       chan bool
-	commands     chan commandType
-	addPlayer    chan *model.Player
-	removePlayer chan int
+	me              *model.Player
+	commands        <-chan commandType
+	chBallEnter     <-chan *model.Ball
+	chBallExitLeft  chan<- *model.Ball
+	chBallExitRight chan<- *model.Ball
+	balls           []*model.Ball
 }
 
 func NewTable(
-	id int,
-	isDone chan bool,
-	commands chan commandType,
-	addPlayer chan *model.Player,
-	removePlayer chan int) *Table {
-
-	me := model.NewPlayer(id)
-
+	me *model.Player,
+	commands <-chan commandType,
+	chBallEnter <-chan *model.Ball,
+	chBallExitLeft chan<- *model.Ball,
+	chBallExitRight chan<- *model.Ball,
+) *Table {
 	return &Table{me,
-		[]*model.Ball{model.NewBall(me)},
-		[]*model.Player{me},
-		make(chan bool),
-		isDone,
-		commands,
-		addPlayer,
-		removePlayer}
+		commands, chBallEnter, chBallExitLeft, chBallExitRight,
+		[]*model.Ball{model.NewBall(me, model.Vec{0, 0}, model.Vec{0, 0})}}
 }
 
 func (table *Table) String() string {
-	return fmt.Sprintf("%s %v", table.me, table.players)
+	return fmt.Sprintf("%v %v", table.me, table.balls)
 }
 
 func (table *Table) play() {
-	fmt.Println("play entered.")
+	log.Println("play entered.")
 	for {
-		fmt.Println("play loop zz top.")
+		log.Println("play loop zz top.")
 		select {
-		case <-table.quitting:
-			table.isDone <- true
-			fmt.Println("All done.")
-			return
 		case c := <-table.commands:
 			switch c {
 			case commandRandomImpulse:
 			case commandImpulse:
 			case commandQuit:
-
 			}
-		case player := <-table.addPlayer:
-			table.players = append(table.players, player)
-		case playerNumber := <-table.removePlayer:
-			fmt.Println("TODO removePlayer %v", playerNumber)
+		case b := <-table.chBallEnter:
+			table.balls = append(table.balls, b)
 		}
 	}
 }
 
 func (table *Table) Quit() {
-	table.quitting <- true
 }

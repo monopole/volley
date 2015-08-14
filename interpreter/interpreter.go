@@ -1,13 +1,11 @@
 package interpreter
 
 import (
-	"github.com/monopole/croupier/game"
-	"github.com/monopole/croupier/model"
 	"github.com/monopole/croupier/screen"
 	"golang.org/x/mobile/app"
-	"golang.org/x/mobile/event/config"
 	"golang.org/x/mobile/event/lifecycle"
 	"golang.org/x/mobile/event/paint"
+	"golang.org/x/mobile/event/size"
 	"golang.org/x/mobile/event/touch"
 	"log"
 )
@@ -35,7 +33,7 @@ func (ub *Interpreter) doIt(
 	log.Printf("Hi there.\n")
 
 	grabbingVector := false
-	var c config.Event
+	var sz size.Event
 	for e := range a.Events() {
 		switch e := app.Filter(e).(type) {
 		case lifecycle.Event:
@@ -50,7 +48,7 @@ func (ub *Interpreter) doIt(
 				return
 			}
 		case paint.Event:
-			screen.Paint(c, ub.iHaveTheCard, ub.touchX, ub.touchY)
+			screen.Paint(sz, ub.iHaveTheCard, ub.touchX, ub.touchY)
 			a.EndPaint(e)
 		case touch.Event:
 			// if e.Type == touch.TypeEnd && iHaveTheCard {
@@ -96,15 +94,15 @@ func (ub *Interpreter) doIt(
 
 				*/
 			}
-		case config.Event:
-			c = e
+		case size.Event:
+			sz = e
 			// These numbers are in the same units as touch events.
 			// After a resize,
 			//   e.X  <= c.WidthPx
 			//   e.Y  <= c.HeightPx
-			log.Printf(" config = (%v, %v)\n", c.WidthPx, c.HeightPx)
-			ub.touchX = float32(c.WidthPx / 2)
-			ub.touchY = float32(c.HeightPx / 2)
+			log.Printf(" config = (%v, %v)\n", sz.WidthPx, sz.HeightPx)
+			ub.touchX = float32(sz.WidthPx / 2)
+			ub.touchY = float32(sz.HeightPx / 2)
 			// gm.SetOrigin(touchX, touchY)
 		}
 	}

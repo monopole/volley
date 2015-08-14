@@ -73,11 +73,8 @@ import (
 	"github.com/monopole/croupier/model"
 	"github.com/monopole/croupier/screen"
 	"golang.org/x/mobile/app"
-	"golang.org/x/mobile/event/config"
-	"golang.org/x/mobile/event/lifecycle"
-	"golang.org/x/mobile/event/paint"
-	"golang.org/x/mobile/event/touch"
 	"log"
+	"time"
 )
 
 const rootName = "volley/player"
@@ -89,18 +86,18 @@ const namespaceRoot = "/localhost:23000"
 func main() {
 	app.Main(func(a app.App) {
 
+		log.Println("Firing up v23")
 		gm := game.NewV23Manager(rootName, namespaceRoot)
-
-		log.Println("Initializing game")
-
 		chBall := make(chan *model.Ball)
 		gm.Initialize(chBall)
 		go gm.Run()
+		log.Println("v23 ready")
 
 		chChQuit := gm.Quitter()
 
+		table := NewTable(managerImpl)
+
 		screen := screen.NewScreen()
-		// table := NewTable(managerImpl)
 
 		interpreter := &interpreter.Interpreter{}
 		go interpreter.doIt(chChQuit, a, screen)

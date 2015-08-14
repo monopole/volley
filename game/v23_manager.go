@@ -39,24 +39,12 @@ type V23Manager struct {
 	shutdown      v23.Shutdown
 	rootName      string
 	namespaceRoot string
-	myNumber      int
+	me            *model.Player
 	players       []*vPlayer
 	chatty        bool
 	chInRecognize chan *model.Player
 	chInForget    chan *model.Player
 	chQuit        chan chan bool
-}
-
-func (gm *V23Manager) Quitter() chan<- chan bool {
-	return gm.chQuit
-}
-
-func (gm *V23Manager) MyNumber() int {
-	return gm.myNumber
-}
-
-func (gm *V23Manager) serverName(n int) string {
-	return gm.rootName + fmt.Sprintf("%04d", n)
 }
 
 func NewV23Manager(
@@ -66,8 +54,9 @@ func NewV23Manager(
 		log.Panic("Why is shutdown nil?")
 	}
 	return &V23Manager{
-		ctx, shutdown, rootName, namespaceRoot,
-		0, []*vPlayer{}, true,
+		ctx, shutdown,
+		rootName, namespaceRoot,
+		nil, []*vPlayer{}, true,
 		make(chan *model.Player),
 		make(chan *model.Player),
 		make(chan chan bool)}
@@ -80,13 +69,13 @@ func (gm *V23Manager) Initialize(chInBall chan<- *model.Ball) {
 	v23.GetNamespace(gm.ctx).SetRoots(gm.namespaceRoot)
 	numbers := gm.playerNumbers()
 	sort.Ints(numbers)
-	if len(numbers) == 0 {
-		gm.myNumber = 1
-	} else {
-		gm.myNumber = numbers[len(numbers)-1] + 1
+	myId := 1
+	if len(numbers) > 0 {
+		myId = numbers[len(numbers)-1] + 1
 	}
+	gm.me = model.NewPlayer(myId)
 	if gm.chatty {
-		log.Printf("My number is %d\n", gm.myNumber)
+		log.Printf("I am %v\n", gm.me)
 	}
 	gm.registerAndServe(chInBall)
 	for _, id := range numbers {
@@ -95,19 +84,31 @@ func (gm *V23Manager) Initialize(chInBall chan<- *model.Ball) {
 	gm.sayHelloToEveryone()
 }
 
+func (gm *V23Manager) Quitter() chan<- chan bool {
+	return gm.chQuit
+}
+
+func (gm *V23Manager) Me() *model.Player {
+	return gm.me
+}
+
+func (gm *V23Manager) serverName(n int) string {
+	return gm.rootName + fmt.Sprintf("%04d", n)
+}
+
 func (gm *V23Manager) recognize(p *model.Player) {
 	if gm.chatty {
-		log.Printf("%d recognizing %v.", gm.MyNumber(), p)
+		log.Printf("%v recognizing %v.", gm.Me(), p)
 	}
 	vp := &vPlayer{p, ifc.GameBuddyClient(gm.serverName(p.Id()))}
 	gm.players = append(gm.players, vp)
 }
 
 func (gm *V23Manager) sayHelloToEveryone() {
-	wp := ifc.Player{int32(gm.MyNumber())}
+	wp := ifc.Player{int32(gm.Me().Id())}
 	for _, vp := range gm.players {
 		if gm.chatty {
-			log.Printf("Asking %v to recognize %v\n", vp.p, gm.MyNumber())
+			log.Printf("Asking %v to recognize %v\n", vp.p, gm.Me())
 		}
 		if err := vp.c.Recognize(
 			gm.ctx, wp, options.SkipServerEndpointAuthorization{}); err != nil {
@@ -117,10 +118,10 @@ func (gm *V23Manager) sayHelloToEveryone() {
 }
 
 func (gm *V23Manager) sayGoodbyeToEveryone() {
-	wp := ifc.Player{int32(gm.MyNumber())}
+	wp := ifc.Player{int32(gm.Me().Id())}
 	for _, vp := range gm.players {
 		if gm.chatty {
-			log.Printf("Asking %v to forget %v\n", vp.p, gm.MyNumber())
+			log.Printf("Asking %v to forget %v\n", vp.p, gm.Me())
 		}
 		if err := vp.c.Forget(
 			gm.ctx, wp, options.SkipServerEndpointAuthorization{}); err != nil {
@@ -134,7 +135,7 @@ func (gm *V23Manager) forget(p *model.Player) {
 		func(i int) bool { return gm.players[i].p.Id() == p.Id() })
 	if i > -1 {
 		if gm.chatty {
-			log.Printf("%d forgetting %v.\n", gm.MyNumber(), p)
+			log.Printf("%d forgetting %v.\n", gm.Me(), p)
 		}
 		gm.players = append(gm.players[:i], gm.players[i+1:]...)
 	} else {
@@ -180,7 +181,7 @@ func (gm *V23Manager) playerNumbers() (list []int) {
 
 func (gm *V23Manager) registerAndServe(chInBall chan<- *model.Ball) {
 	s := MakeServer(gm.ctx)
-	myName := gm.serverName(gm.myNumber)
+	myName := gm.serverName(gm.Me().Id())
 	if gm.chatty {
 		log.Printf("Calling myself %s\n", myName)
 	}
@@ -233,4 +234,5 @@ func (gm *V23Manager) quit() {
 	if gm.chatty {
 		log.Println("Manager done.")
 	}
+	// TODO: close all outgoing channels (chan<-) that i own.
 }

@@ -1,8 +1,10 @@
 package screen
 
+// Based on https://github.com/golang/mobile/blob/master/example/basic/main.go
+
 import (
 	"encoding/binary"
-	"golang.org/x/mobile/event/config"
+	"golang.org/x/mobile/event/size"
 	//	"golang.org/x/mobile/exp/app/debug"
 	"golang.org/x/mobile/exp/f32"
 	"golang.org/x/mobile/exp/gl/glutil"
@@ -53,7 +55,7 @@ func (s *Screen) Start() {
 }
 
 func (s *Screen) Paint(
-	c config.Event, iHaveTheCard bool, touchX float32, touchY float32) {
+	sz size.Event, iHaveTheCard bool, touchX float32, touchY float32) {
 	if iHaveTheCard {
 		s.red = 0.8
 	} else {
@@ -73,8 +75,8 @@ func (s *Screen) Paint(
 	// Move the triangle
 	gl.Uniform2f(
 		s.offset,
-		touchX/float32(c.WidthPx),
-		touchY/float32(c.HeightPx))
+		touchX/float32(sz.WidthPx),
+		touchY/float32(sz.HeightPx))
 
 	gl.BindBuffer(gl.ARRAY_BUFFER, s.buf)
 	gl.EnableVertexAttribArray(s.position)

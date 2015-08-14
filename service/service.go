@@ -48,7 +48,10 @@ func (x *impl) Forget(_ *context.T, _ rpc.ServerCall, p ifc.Player) error {
 
 func (x *impl) Accept(_ *context.T, _ rpc.ServerCall, b ifc.Ball) error {
 	player := model.NewPlayer(int(b.Owner.Id))
-	ball := model.NewBall(player, b.X, b.Y, b.Dx, b.Dy)
+	ball := model.NewBall(
+		player,
+		model.Vec{b.X, b.Y},
+		model.Vec{b.Dx, b.Dy})
 	go func() {
 		x.chBall <- ball
 	}()
