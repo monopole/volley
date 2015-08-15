@@ -310,7 +310,8 @@ func (gm *V23Manager) sayHelloToEveryone() {
 			log.Printf("Asking %v to recognize me=%v\n", vp.p, gm.Me())
 		}
 		if err := vp.c.Recognize(
-			gm.ctx, wp, options.SkipServerEndpointAuthorization{}); err != nil {
+			gm.ctx, wp,
+			options.SkipServerEndpointAuthorization{}); err != nil {
 			log.Panic("Recognize failed: ", err)
 		}
 		if gm.chatty {
@@ -423,7 +424,8 @@ func (gm *V23Manager) tossBall(bc model.BallCommand) {
 		if k >= 0 {
 			vp := gm.players[k]
 			if err := vp.c.Accept(
-				gm.ctx, wb, options.SkipServerEndpointAuthorization{}); err != nil {
+				gm.ctx, wb,
+				options.SkipServerEndpointAuthorization{}); err != nil {
 				log.Panic("Ball throw left failed.")
 			}
 		} else {
@@ -436,7 +438,8 @@ func (gm *V23Manager) tossBall(bc model.BallCommand) {
 		if k <= len(gm.players)-1 {
 			vp := gm.players[k]
 			if err := vp.c.Accept(
-				gm.ctx, wb, options.SkipServerEndpointAuthorization{}); err != nil {
+				gm.ctx, wb,
+				options.SkipServerEndpointAuthorization{}); err != nil {
 				log.Panic("Ball throw right failed.")
 			}
 		} else {

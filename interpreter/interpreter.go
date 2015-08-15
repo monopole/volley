@@ -66,7 +66,7 @@ func (ub *Interpreter) Run(a app.App) {
 				if ub.chatty {
 					log.Printf("App stopping!\n")
 				}
-				// Perhaps there's a mode where the screen
+				// TODO(monopole): Perhaps there's a mode where the screen
 				// is stopped but the app keeps going?
 				ub.quit()
 				return

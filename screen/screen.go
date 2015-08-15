@@ -35,7 +35,7 @@ func NewScreen() *Screen {
 func (s *Screen) Start() {
 	var err error
 
-	s.red = 0.8
+	s.red = 0.1
 	s.green = 0.8
 	s.blue = 0.4
 
@@ -83,7 +83,6 @@ func (s *Screen) Paint(balls []*model.Ball) {
 	gl.BindBuffer(gl.ARRAY_BUFFER, s.buf)
 	gl.EnableVertexAttribArray(s.position)
 	gl.VertexAttribPointer(s.position, coordsPerVertex, gl.FLOAT, false, 0, 0)
-	// if iHaveTheCard {
 	gl.DrawArrays(gl.TRIANGLES, 0, vertexCount)
 
 	gl.DisableVertexAttribArray(s.position)
