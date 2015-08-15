@@ -1,49 +1,57 @@
 package interpreter
 
 import (
-	"github.com/monopole/croupier/screen"
+	"github.com/monopole/croupier/model"
 	"golang.org/x/mobile/app"
 	"golang.org/x/mobile/event/lifecycle"
 	"golang.org/x/mobile/event/paint"
 	"golang.org/x/mobile/event/size"
 	"golang.org/x/mobile/event/touch"
 	"log"
+	"math"
 )
 
 type Interpreter struct {
-	chatty bool
-	chQuit chan<- chan bool // Not owned, written to.
-	touchX float32
-	touchY float32
-	beginX float32
-	beginY float32
+	chatty        bool
+	chQuit        chan<- chan bool         // Not owned, written to.
+	chExecCommand chan<- model.ExecCommand // Not owned, written to.
+	chImpulse     chan<- *model.Ball       // Not owned, written to.
+	chResize      chan<- model.Vec         // Not owned, written to.
+	touchX        float32
+	touchY        float32
+	beginX        float32
+	beginY        float32
 }
 
 func NewInterpreter(
 	chatty bool,
 	chQuit chan<- chan bool,
+	chExecCommand chan<- model.ExecCommand,
+	chImpulse chan<- *model.Ball,
+	chResize chan<- model.Vec,
 ) *Interpreter {
 	return &Interpreter{
 		chatty,
 		chQuit,
+		chExecCommand,
+		chImpulse,
+		chResize,
 		0, 0, 0, 0,
 	}
 }
 
 func (ub *Interpreter) quit() {
+	ub.chExecCommand <- model.ExecStop
 	ch := make(chan bool)
 	ub.chQuit <- ch
 	<-ch
 }
 
-func (ub *Interpreter) Run(
-	a app.App,
-	screen *screen.Screen) {
-
+func (ub *Interpreter) Run(a app.App) {
 	if ub.chatty {
-		log.Printf("Hi there.\n")
+		log.Println("Starting interpreter.")
 	}
-	grabbingVector := false
+	holdCount := 0
 	var sz size.Event
 	for e := range a.Events() {
 		switch e := app.Filter(e).(type) {
@@ -53,32 +61,27 @@ func (ub *Interpreter) Run(
 				if ub.chatty {
 					log.Printf("App starting!\n")
 				}
-				screen.Start()
+				ub.chExecCommand <- model.ExecStart
 			case lifecycle.CrossOff:
 				if ub.chatty {
 					log.Printf("App stopping!\n")
 				}
-				screen.Stop()
+				// Perhaps there's a mode where the screen
+				// is stopped but the app keeps going?
 				ub.quit()
 				return
 			}
 		case paint.Event:
-			// screen.Paint(sz, ub.touchX, ub.touchY)
+			ub.chExecCommand <- model.ExecPaint
+			// TODO(jregan): might have to wait for a response
+			// before calling back to the app.
 			a.EndPaint(e)
 		case touch.Event:
-			// if e.Type == touch.TypeEnd {
-			// gm.PassTheCard()
-			// touchX = gm.GetOriginX()
-			// touchY = gm.GetOriginY()
-			// } else {
-			// touchX = e.X
-			// touchY = e.Y
-			// }
 			switch e.Type {
 			case touch.TypeBegin:
-				grabbingVector = true
+				holdCount = 1
 				if ub.chatty {
-					log.Printf("Touch Begin.\n")
+					// 	log.Printf("Touch Begin.\n")
 				}
 				ub.beginX = e.X
 				ub.beginY = e.Y
@@ -86,50 +89,51 @@ func (ub *Interpreter) Run(
 					if ub.chatty {
 						log.Printf("Touched shutdown spot.\n")
 					}
-					screen.Stop()
 					ub.quit()
 					return
 				}
 			case touch.TypeMove:
+				holdCount++
 				if ub.chatty {
-					log.Printf("Touch Moving.\n")
+					// log.Printf("Touch Moving.\n")
 				}
 			case touch.TypeEnd:
-				if !grabbingVector {
-					if ub.chatty {
-						log.Printf("That's odd!\n")
+				if holdCount > 0 && holdCount < 20 {
+					// If they hold on too long, ignore it.
+					dx := float64(e.X - ub.beginX)
+					dy := float64(e.Y - ub.beginY)
+					mag := math.Sqrt(dx*dx + dy*dy)
+					if mag > 10 {
+						// They should drag for around 10 pixels.
+						b := model.NewBall(nil,
+							model.Vec{ub.beginX, ub.beginY},
+							model.Vec{float32(dx / mag), float32(dy / mag)})
+						ub.chImpulse <- b
 					}
 				}
-				grabbingVector = false
-				if ub.chatty {
-					log.Printf("Done\n")
-					log.Printf("  begin = (%v, %v)\n", ub.beginX, ub.beginY)
-					log.Printf("    end = (%v, %v)\n", e.X, e.Y)
-					log.Printf("  delta = (%v, %v)\n", e.X-ub.beginX, e.Y-ub.beginY)
-				}
-				/*
-						On X11, screen points come in as some kind of pixels.
-						As the screen is resized, 0,0 stays the same,
-					  but the other numbers change.
+				holdCount = 0
 
-							(0,0)    ... (high, 0)
-							...          ...
-							(0,high) ... (high, high)
+				/*
+										On X11, screen points come in as some kind of pixels.
+										As the screen is resized, 0,0 stays the same,
+										but the other numbers change.
+
+										(0,0)    ... (high, 0)
+										...          ...
+										(0,high) ... (high, high)
+
+										After a resize, the center of the screen is
+										x = float32(sz.WidthPx / 2)
+										y = float32(sz.HeightPx / 2)
+
+					          The width and height come in as integers - but they
+					          seem to be in the same units (pixels).
 
 				*/
 			}
 		case size.Event:
 			sz = e
-			// These numbers are in the same units as touch events.
-			// After a resize,
-			//   e.X  <= c.WidthPx
-			//   e.Y  <= c.HeightPx
-			if ub.chatty {
-				log.Printf(" config = (%v, %v)\n", sz.WidthPx, sz.HeightPx)
-			}
-			ub.touchX = float32(sz.WidthPx / 2)
-			ub.touchY = float32(sz.HeightPx / 2)
-			// gm.SetOrigin(touchX, touchY)
+			ub.chResize <- model.Vec{float32(sz.WidthPx), float32(sz.HeightPx)}
 		}
 	}
 }

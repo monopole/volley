@@ -376,10 +376,10 @@ func (gm *V23Manager) playerNumbers() (list []int) {
 }
 
 func (gm *V23Manager) Run(cbc <-chan model.BallCommand) {
-	gm.chBallCommand = cbc
 	if gm.chatty {
-		log.Println("V23Manager preparing to run.")
+		log.Println("Final prep of V23Manager.")
 	}
+	gm.chBallCommand = cbc
 	for _, id := range gm.initialPlayerNumbers {
 		gm.recognizeOther(model.NewPlayer(id))
 	}
@@ -387,7 +387,7 @@ func (gm *V23Manager) Run(cbc <-chan model.BallCommand) {
 	gm.isRunning = true
 	gm.checkDoors()
 	if gm.chatty {
-		log.Println("V23Manager starting run loop.")
+		log.Println("Starting V23Manager run loop.")
 	}
 	for {
 		select {
