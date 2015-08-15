@@ -110,7 +110,7 @@ func (gm *V23Manager) ChQuit() chan<- chan bool {
 }
 
 func (gm *V23Manager) ChIncomingBall() <-chan *model.Ball {
-	return gm.relay.ChBall()
+	return gm.relay.ChIncomingBall()
 }
 
 func (gm *V23Manager) Me() *model.Player {
@@ -359,8 +359,8 @@ func (gm *V23Manager) tossBall(bc model.BallCommand) {
 	}
 	// k is where myself should be placed, and the element at k and
 	// everything higher should be right-shifted.  Implication is that
-	// the player currently at k is on the 'right', while the player at
-	// k-1 is on the left.
+	// the player currently at k is on my 'right', while the player at
+	// k-1 is on my left.
 	k := gm.findInsertion(gm.myself)
 	wb := serializeBall(bc.B)
 	if bc.D == model.Left {

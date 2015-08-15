@@ -13,9 +13,9 @@ import (
 )
 
 type Relay struct {
-	chRecognize chan *model.Player
-	chForget    chan *model.Player
-	chBall      chan *model.Ball
+	chRecognize    chan *model.Player
+	chForget       chan *model.Player
+	chIncomingBall chan *model.Ball
 }
 
 func MakeRelay() *Relay {
@@ -38,7 +38,7 @@ func MakeRelay() *Relay {
 func (x *Relay) Close() {
 	close(x.chRecognize)
 	close(x.chForget)
-	close(x.chBall)
+	close(x.chIncomingBall)
 }
 
 func (x *Relay) ChRecognize() <-chan *model.Player {
@@ -49,8 +49,8 @@ func (x *Relay) ChForget() <-chan *model.Player {
 	return x.chForget
 }
 
-func (x *Relay) ChBall() <-chan *model.Ball {
-	return x.chBall
+func (x *Relay) ChIncomingBall() <-chan *model.Ball {
+	return x.chIncomingBall
 }
 
 func (x *Relay) Recognize(_ *context.T, _ rpc.ServerCall, p ifc.Player) error {
@@ -76,7 +76,7 @@ func (x *Relay) Accept(_ *context.T, _ rpc.ServerCall, b ifc.Ball) error {
 		model.Vec{b.X, b.Y},
 		model.Vec{b.Dx, b.Dy})
 	go func() {
-		x.chBall <- ball
+		x.chIncomingBall <- ball
 	}()
 	return nil
 }
