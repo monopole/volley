@@ -138,6 +138,10 @@ func (gm *V23Manager) recognizeOther(p *model.Player) {
 	}
 	if gm.isRunning {
 		gm.checkDoors()
+	} else {
+		if gm.chatty {
+			log.Printf("Not running, so not checking doors post recog.")
+		}
 	}
 }
 
@@ -180,6 +184,9 @@ func (gm *V23Manager) forgetOther(p *model.Player) {
 }
 
 func (gm *V23Manager) checkDoors() {
+	if gm.chatty {
+		log.Printf("Checking doors.\n")
+	}
 	if len(gm.players) == 0 {
 		if gm.chatty {
 			log.Printf("I'm the only player.\n")
@@ -198,6 +205,16 @@ func (gm *V23Manager) checkDoors() {
 		}
 		gm.assureDoor(model.DoorCommand{model.Open, model.Left})
 		gm.assureDoor(model.DoorCommand{model.Closed, model.Right})
+	} else {
+		if gm.chatty {
+			log.Printf("I'm somewhere in the middle.\n")
+		}
+	}
+	if gm.chatty {
+		log.Printf("       Me: %v.\n", gm.myself)
+		for i, vp := range gm.players {
+			log.Printf("         p[%d] = %v\n", i, vp.p)
+		}
 	}
 }
 
@@ -252,6 +269,9 @@ func (gm *V23Manager) assureDoor(dc model.DoorCommand) {
 }
 
 func (gm *V23Manager) sayHelloToEveryone() {
+	if gm.chatty {
+		log.Printf("Me (%v) saying Hello to everyone.\n", gm.Me())
+	}
 	wp := ifc.Player{int32(gm.Me().Id())}
 	for _, vp := range gm.players {
 		if gm.chatty {
@@ -264,6 +284,9 @@ func (gm *V23Manager) sayHelloToEveryone() {
 		if gm.chatty {
 			log.Printf("Recognize call completed.")
 		}
+	}
+	if gm.chatty {
+		log.Printf("Me (%v) DONE saying Hello to everyone.\n", gm.Me())
 	}
 }
 
@@ -323,7 +346,7 @@ func (gm *V23Manager) playerNumbers() (list []int) {
 func (gm *V23Manager) Run(cbc <-chan model.BallCommand) {
 	gm.chBallCommand = cbc
 	if gm.chatty {
-		log.Println("V23Manager Running.")
+		log.Println("V23Manager preparing to run.")
 	}
 	for _, id := range gm.initialPlayerNumbers {
 		gm.recognizeOther(model.NewPlayer(id))
@@ -331,6 +354,9 @@ func (gm *V23Manager) Run(cbc <-chan model.BallCommand) {
 	gm.sayHelloToEveryone()
 	gm.isRunning = true
 	gm.checkDoors()
+	if gm.chatty {
+		log.Println("V23Manager starting run loop.")
+	}
 	for {
 		select {
 		case ch := <-gm.chQuit:
