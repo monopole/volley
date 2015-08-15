@@ -36,6 +36,9 @@ type vPlayer struct {
 type V23Manager struct {
 	ctx                  *context.T
 	shutdown             v23.Shutdown
+	isRunning            bool
+	isLeftDoorOpen       bool
+	isRightDoorOpen      bool
 	rootName             string
 	namespaceRoot        string
 	relay                *service.Relay
@@ -54,7 +57,7 @@ func NewV23Manager(rootName string, namespaceRoot string) *V23Manager {
 		log.Panic("shutdown nil")
 	}
 	return &V23Manager{
-		ctx, shutdown,
+		ctx, shutdown, false, false, false,
 		rootName, namespaceRoot,
 		nil,  // relay
 		true, // chatty
@@ -133,29 +136,8 @@ func (gm *V23Manager) recognizeOther(p *model.Player) {
 	if gm.chatty {
 		log.Printf("me=%v has recognized %v.", gm.Me(), p)
 	}
-
-	// TODO(monopole): should not open the door until we are sure that
-	// the other guy recognizes us, else we send a ball to someone who
-	// doesn't know us, and/or we accept a ball before we're ready to
-	// play.  If this is called in gm.Run, it will be after table.Run,
-	// which means a ball might fly off the table through a dropped wall
-	// before the other guy recognizes us.
-
-	// Someone came in on the left,
-	command := model.DoorCommand{model.Open, model.Left}
-	if p.Id() > gm.myself.Id() {
-		// else someone came in on the right.
-		command = model.DoorCommand{model.Open, model.Right}
-	}
-	if gm.chatty {
-		log.Printf("Sending a door open command.\n")
-		if gm.chDoorCommand == nil {
-			log.Panic("The channel is nil.")
-		}
-	}
-	gm.chDoorCommand <- command
-	if gm.chatty {
-		log.Printf("Door open command consumed.\n")
+	if gm.isRunning {
+		gm.checkDoors()
 	}
 }
 
@@ -194,22 +176,78 @@ func (gm *V23Manager) forgetOther(p *model.Player) {
 			log.Printf("Asked to forget %v, but don't know him\n.", p)
 		}
 	}
+	gm.checkDoors()
+}
+
+func (gm *V23Manager) checkDoors() {
 	if len(gm.players) == 0 {
 		if gm.chatty {
 			log.Printf("I'm the only player.\n")
 		}
-		gm.chDoorCommand <- model.DoorCommand{model.Closed, model.Left}
-		gm.chDoorCommand <- model.DoorCommand{model.Closed, model.Right}
-	} else if gm.players[0].p.Id() == gm.myself.Id() {
+		gm.assureDoor(model.DoorCommand{model.Closed, model.Left})
+		gm.assureDoor(model.DoorCommand{model.Closed, model.Right})
+	} else if gm.myself.Id() < gm.players[0].p.Id() {
 		if gm.chatty {
-			log.Printf("Sending a door close left command.\n")
+			log.Printf("I'm the left-most of %d players.\n", len(gm.players)+1)
 		}
-		gm.chDoorCommand <- model.DoorCommand{model.Closed, model.Left}
-	} else if gm.players[len(gm.players)-1].p.Id() == gm.myself.Id() {
+		gm.assureDoor(model.DoorCommand{model.Closed, model.Left})
+		gm.assureDoor(model.DoorCommand{model.Open, model.Right})
+	} else if gm.players[len(gm.players)-1].p.Id() < gm.myself.Id() {
 		if gm.chatty {
-			log.Printf("Sending a door close right command.\n")
+			log.Printf("I'm the right-most of %d players.\n", len(gm.players)+1)
 		}
-		gm.chDoorCommand <- model.DoorCommand{model.Closed, model.Right}
+		gm.assureDoor(model.DoorCommand{model.Open, model.Left})
+		gm.assureDoor(model.DoorCommand{model.Closed, model.Right})
+	}
+}
+
+func (gm *V23Manager) assureDoor(dc model.DoorCommand) {
+	if dc.S == model.Open {
+		if dc.D == model.Left {
+			if gm.isLeftDoorOpen {
+				if gm.chatty {
+					log.Printf("Left door already open.\n")
+				}
+				return
+			}
+			gm.isLeftDoorOpen = true
+		} else {
+			if gm.isRightDoorOpen {
+				if gm.chatty {
+					log.Printf("Right door already open.\n")
+				}
+				return
+			}
+			gm.isRightDoorOpen = true
+		}
+	} else {
+		if dc.D == model.Left {
+			if !gm.isLeftDoorOpen {
+				if gm.chatty {
+					log.Printf("Left door already closed.\n")
+				}
+				return
+			}
+			gm.isLeftDoorOpen = false
+		} else {
+			if !gm.isRightDoorOpen {
+				if gm.chatty {
+					log.Printf("Right door already closed.\n")
+				}
+				return
+			}
+			gm.isRightDoorOpen = false
+		}
+	}
+	if gm.chDoorCommand == nil {
+		log.Panic("The door channel is nil.")
+	}
+	if gm.chatty {
+		log.Printf("Sending door command: %v\n", dc)
+	}
+	gm.chDoorCommand <- dc
+	if gm.chatty {
+		log.Printf("Door command %v consumed.\n", dc)
 	}
 }
 
@@ -291,6 +329,8 @@ func (gm *V23Manager) Run(cbc <-chan model.BallCommand) {
 		gm.recognizeOther(model.NewPlayer(id))
 	}
 	gm.sayHelloToEveryone()
+	gm.isRunning = true
+	gm.checkDoors()
 	for {
 		select {
 		case ch := <-gm.chQuit:

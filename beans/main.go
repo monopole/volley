@@ -13,11 +13,13 @@ import (
 	"time"
 )
 
-const rootName = "croupier/player"
+const rootName = "beans/player"
 
 // const namespaceRoot = "/104.197.96.113:3389"
 // const namespaceRoot = "/172.17.166.64:23000"
-const namespaceRoot = "/localhost:23000"
+// const namespaceRoot = "/192.168.2.71:23000"
+// const namespaceRoot = "/localhost:23000"
+const namespaceRoot = "/192.168.2.71:23000"
 
 func main() {
 	log.Println("Making v23.")
