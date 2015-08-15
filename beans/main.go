@@ -33,10 +33,10 @@ func main() {
 		gm.ChQuit(),
 	)
 
-	log.Println("Firing off table")
+	log.Println("Firing table")
 	go table.Run()
 
-	log.Println("Firing off v23")
+	log.Println("Firing v23")
 	go gm.Run(table.ChBallCommand())
 
 	delta := 5

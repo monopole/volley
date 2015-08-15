@@ -25,7 +25,6 @@ import (
 	"v.io/v23/context"
 	"v.io/v23/naming"
 	"v.io/v23/options"
-	//	"v.io/v23/options"
 	_ "v.io/x/ref/runtime/factories/generic"
 )
 
@@ -119,9 +118,9 @@ func (gm *V23Manager) serverName(n int) string {
 	return gm.rootName + fmt.Sprintf("%04d", n)
 }
 
-func (gm *V23Manager) recognize(p *model.Player) {
+func (gm *V23Manager) recognizeOther(p *model.Player) {
 	if gm.chatty {
-		log.Printf("%v recognizing %v.", gm.Me(), p)
+		log.Printf("me=%v recognizing %v.", gm.Me(), p)
 	}
 	vp := &vPlayer{p, ifc.GameBuddyClient(gm.serverName(p.Id()))}
 
@@ -130,6 +129,17 @@ func (gm *V23Manager) recognize(p *model.Player) {
 	gm.players = append(gm.players, nil)
 	copy(gm.players[k+1:], gm.players[k:])
 	gm.players[k] = vp
+
+	if gm.chatty {
+		log.Printf("me=%v has recognized %v.", gm.Me(), p)
+	}
+
+	// TODO(monopole): should not open the door until we are sure that
+	// the other guy recognizes us, else we send a ball to someone who
+	// doesn't know us, and/or we accept a ball before we're ready to
+	// play.  If this is called in gm.Run, it will be after table.Run,
+	// which means a ball might fly off the table through a dropped wall
+	// before the other guy recognizes us.
 
 	// Someone came in on the left,
 	command := model.DoorCommand{model.Open, model.Left}
@@ -143,11 +153,9 @@ func (gm *V23Manager) recognize(p *model.Player) {
 			log.Panic("The channel is nil.")
 		}
 	}
-	// go func() {
 	gm.chDoorCommand <- command
-	// }()
 	if gm.chatty {
-		log.Printf("Door is apparently open.\n")
+		log.Printf("Door open command consumed.\n")
 	}
 }
 
@@ -174,7 +182,7 @@ func findIndex(limit int, predicate func(i int) bool) int {
 	return -1
 }
 
-func (gm *V23Manager) forget(p *model.Player) {
+func (gm *V23Manager) forgetOther(p *model.Player) {
 	i := gm.findPlayerIndex(p)
 	if i > -1 {
 		if gm.chatty {
@@ -190,24 +198,18 @@ func (gm *V23Manager) forget(p *model.Player) {
 		if gm.chatty {
 			log.Printf("I'm the only player.\n")
 		}
-		// go func() {
 		gm.chDoorCommand <- model.DoorCommand{model.Closed, model.Left}
 		gm.chDoorCommand <- model.DoorCommand{model.Closed, model.Right}
-		// }()
 	} else if gm.players[0].p.Id() == gm.myself.Id() {
 		if gm.chatty {
 			log.Printf("Sending a door close left command.\n")
 		}
-		// go func() {
 		gm.chDoorCommand <- model.DoorCommand{model.Closed, model.Left}
-		// }()
 	} else if gm.players[len(gm.players)-1].p.Id() == gm.myself.Id() {
 		if gm.chatty {
 			log.Printf("Sending a door close right command.\n")
 		}
-		// go func() {
 		gm.chDoorCommand <- model.DoorCommand{model.Closed, model.Right}
-		// }()
 	}
 }
 
@@ -286,7 +288,7 @@ func (gm *V23Manager) Run(cbc <-chan model.BallCommand) {
 		log.Println("V23Manager Running.")
 	}
 	for _, id := range gm.initialPlayerNumbers {
-		gm.recognize(model.NewPlayer(id))
+		gm.recognizeOther(model.NewPlayer(id))
 	}
 	gm.sayHelloToEveryone()
 	for {
@@ -298,9 +300,9 @@ func (gm *V23Manager) Run(cbc <-chan model.BallCommand) {
 		case bc := <-gm.chBallCommand:
 			gm.tossBall(bc)
 		case p := <-gm.relay.ChRecognize():
-			gm.recognize(p)
+			gm.recognizeOther(p)
 		case p := <-gm.relay.ChForget():
-			gm.forget(p)
+			gm.forgetOther(p)
 		}
 	}
 }
@@ -315,10 +317,12 @@ func (gm *V23Manager) tossBall(bc model.BallCommand) {
 	if gm.chatty {
 		log.Printf("Got ball command: %v\n", bc)
 	}
-
+	// k is where myself should be placed, and the element at k and
+	// everything higher should be right-shifted.  Implication is that
+	// the player currently at k is on the 'right', while the player at
+	// k-1 is on the left.
 	k := gm.findInsertion(gm.myself)
 	wb := serializeBall(bc.B)
-
 	if bc.D == model.Left {
 		// Throw ball left.
 		k--
