@@ -8,6 +8,7 @@ package main
 
 import (
 	"github.com/monopole/croupier/game"
+	"github.com/monopole/croupier/table"
 	"log"
 	"time"
 )
@@ -19,23 +20,35 @@ const rootName = "croupier/player"
 const namespaceRoot = "/localhost:23000"
 
 func main() {
-
+	log.Println("Making v23.")
 	gm := game.NewV23Manager(rootName, namespaceRoot)
-
-	log.Println("Initializing game")
 	gm.Initialize()
-	go gm.Run()
+
+	log.Println("Making the table.")
+	table := table.NewTable(
+		gm.Me(),
+		nil, // screen.NewScreen(),
+		gm.ChIncomingBall(),
+		gm.ChDoorCommand(),
+		gm.ChQuit(),
+	)
+
+	log.Println("Firing off table")
+	go table.Run()
+
+	log.Println("Firing off v23")
+	go gm.Run(table.ChBallCommand())
 
 	delta := 5
 	timeStep := time.Duration(delta) * time.Second
-	for i := 6; i > 0; i-- {
+	for i := 4; i > 0; i-- {
 		log.Printf("%d seconds left...\n", i*delta)
 		<-time.After(timeStep)
 	}
 
 	log.Println("Sending quit.")
 	ch := make(chan bool)
-	gm.Quitter() <- ch
+	table.ChQuit() <- ch
 	<-ch
 
 	log.Println("All done.")

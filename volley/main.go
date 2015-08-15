@@ -7,9 +7,8 @@ package main
 
 import (
 	"github.com/monopole/croupier/game"
-	"github.com/monopole/croupier/interpreter"
-	"github.com/monopole/croupier/model"
 	"github.com/monopole/croupier/screen"
+	"github.com/monopole/croupier/table"
 	"golang.org/x/mobile/app"
 	"log"
 	"time"
@@ -34,10 +33,11 @@ func main() {
 		table := table.NewTable(
 			gm.Me(),
 			screen.NewScreen(),
+			gm.ChIncomingBall(),
 			nil, nil, nil, nil,
 		)
 
-		//		interpreter := &interpreter.Interpreter{}
+		// interpreter := &interpreter.Interpreter{}
 		//	go interpreter.doIt(chChQuit, a, screen)
 
 		delta := 5

@@ -5,6 +5,16 @@ import (
 	"strconv"
 )
 
+type ExecCommand int
+
+const (
+	ExecError ExecCommand = iota
+	ExecStart
+	ExecStop
+	ExecRandomImpulse
+	ExecPaint
+)
+
 type Vec struct {
 	X float32
 	Y float32
@@ -38,6 +48,53 @@ type Ball struct {
 	owner *Player
 	p     Vec
 	v     Vec
+}
+
+type DoorState int
+
+const (
+	Open DoorState = iota
+	Closed
+)
+
+type Direction int
+
+const (
+	Left Direction = iota
+	Right
+)
+
+type DoorCommand struct {
+	S DoorState
+	D Direction
+}
+
+func (dc DoorCommand) String() string {
+	if dc.S == Open {
+		if dc.D == Left {
+			return "open-left"
+		} else {
+			return "open-right"
+		}
+	} else {
+		if dc.D == Left {
+			return "close-left"
+		} else {
+			return "close-right"
+		}
+	}
+}
+
+type BallCommand struct {
+	B *Ball
+	D Direction
+}
+
+func (bc BallCommand) String() string {
+	if bc.D == Left {
+		return "toss-" + bc.B.String() + "-left"
+	}
+	return "toss-" + bc.B.String() + "-right"
 }
 
 func NewBall(
