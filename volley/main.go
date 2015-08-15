@@ -6,7 +6,9 @@
 package main
 
 import (
+	"github.com/monopole/croupier/config"
 	"github.com/monopole/croupier/game"
+	"github.com/monopole/croupier/interpreter"
 	"github.com/monopole/croupier/screen"
 	"github.com/monopole/croupier/table"
 	"golang.org/x/mobile/app"
@@ -14,44 +16,44 @@ import (
 	"time"
 )
 
-const rootName = "volley/player"
-
-// const namespaceRoot = "/104.197.96.113:3389"
-// const namespaceRoot = "/172.17.166.64:23000"
-const namespaceRoot = "/localhost:23000"
-
 func main() {
 	app.Main(func(a app.App) {
 
-		log.Println("Starting.")
-
-		gm := game.NewV23Manager(rootName, namespaceRoot)
+		gm := game.NewV23Manager(
+			config.Chatty, config.RootName, config.NamespaceRoot)
 		gm.Initialize()
-		go gm.Run()
-		chChQuit := gm.Quitter()
 
+		if config.Chatty {
+			log.Println("Making the table.")
+		}
+		s := screen.NewScreen()
 		table := table.NewTable(
+			config.Chatty,
 			gm.Me(),
-			screen.NewScreen(),
+			s,
 			gm.ChIncomingBall(),
-			nil, nil, nil, nil,
+			gm.ChDoorCommand(),
+			gm.ChQuit(),
 		)
 
-		// interpreter := &interpreter.Interpreter{}
-		//	go interpreter.doIt(chChQuit, a, screen)
-
-		delta := 5
-		timeStep := time.Duration(delta) * time.Second
-		for i := 6; i > 0; i-- {
-			log.Printf("%d seconds left...\n", i*delta)
-			<-time.After(timeStep)
+		if config.Chatty {
+			log.Println("Firing table")
 		}
+		go table.Run()
 
-		log.Println("Sending quit.")
-		ch := make(chan bool)
-		chChQuit <- ch
-		<-ch
-		log.Println("All done.")
+		if config.Chatty {
+			log.Println("Firing v23")
+		}
+		go gm.Run(table.ChBallCommand())
 
+		// Let the network fire up?  Use channel to signal instead.
+		<-time.After(3 * time.Second)
+
+		ub := interpreter.NewInterpreter(
+			config.Chatty,
+			table.ChQuit(),
+		)
+
+		ub.Run(a, s)
 	})
 }

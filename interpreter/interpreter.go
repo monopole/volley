@@ -11,27 +11,38 @@ import (
 )
 
 type Interpreter struct {
+	chatty bool
+	chQuit chan<- chan bool // Not owned, written to.
 	touchX float32
 	touchY float32
 	beginX float32
 	beginY float32
-
-	iHaveTheCard bool
 }
 
-func (ub *Interpreter) quit(chChQuit chan chan bool) {
-	chQuit := make(chan bool)
-	chChQuit <- chQuit
-	<-chQuit
+func NewInterpreter(
+	chatty bool,
+	chQuit chan<- chan bool,
+) *Interpreter {
+	return &Interpreter{
+		chatty,
+		chQuit,
+		0, 0, 0, 0,
+	}
 }
 
-func (ub *Interpreter) doIt(
-	chChQuit chan chan bool, a app.App, screen *screen.Screen) {
-	// The server initializes with player '0' holding the card.
-	ub.iHaveTheCard = true
+func (ub *Interpreter) quit() {
+	ch := make(chan bool)
+	ub.chQuit <- ch
+	<-ch
+}
 
-	log.Printf("Hi there.\n")
+func (ub *Interpreter) Run(
+	a app.App,
+	screen *screen.Screen) {
 
+	if ub.chatty {
+		log.Printf("Hi there.\n")
+	}
 	grabbingVector := false
 	var sz size.Event
 	for e := range a.Events() {
@@ -39,23 +50,26 @@ func (ub *Interpreter) doIt(
 		case lifecycle.Event:
 			switch e.Crosses(lifecycle.StageVisible) {
 			case lifecycle.CrossOn:
-				log.Printf("Starting Up!\n")
+				if ub.chatty {
+					log.Printf("App starting!\n")
+				}
 				screen.Start()
 			case lifecycle.CrossOff:
-				log.Printf("Shutting Down!\n")
+				if ub.chatty {
+					log.Printf("App stopping!\n")
+				}
 				screen.Stop()
-				ub.quit(chChQuit)
+				ub.quit()
 				return
 			}
 		case paint.Event:
-			// screen.Paint(sz, ub.iHaveTheCard, ub.touchX, ub.touchY)
+			// screen.Paint(sz, ub.touchX, ub.touchY)
 			a.EndPaint(e)
 		case touch.Event:
-			// if e.Type == touch.TypeEnd && iHaveTheCard {
+			// if e.Type == touch.TypeEnd {
 			// gm.PassTheCard()
 			// touchX = gm.GetOriginX()
 			// touchY = gm.GetOriginY()
-			// iHaveTheCard = false
 			// } else {
 			// touchX = e.X
 			// touchY = e.Y
@@ -63,26 +77,36 @@ func (ub *Interpreter) doIt(
 			switch e.Type {
 			case touch.TypeBegin:
 				grabbingVector = true
-				log.Printf("Begin.\n")
+				if ub.chatty {
+					log.Printf("Touch Begin.\n")
+				}
 				ub.beginX = e.X
 				ub.beginY = e.Y
 				if e.X < 10 && e.Y < 10 {
-					log.Printf("Shutting Down!\n")
+					if ub.chatty {
+						log.Printf("Touched shutdown spot.\n")
+					}
 					screen.Stop()
-					ub.quit(chChQuit)
+					ub.quit()
 					return
 				}
 			case touch.TypeMove:
-				log.Printf("Moving.\n")
+				if ub.chatty {
+					log.Printf("Touch Moving.\n")
+				}
 			case touch.TypeEnd:
 				if !grabbingVector {
-					log.Printf("That's odd!\n")
+					if ub.chatty {
+						log.Printf("That's odd!\n")
+					}
 				}
 				grabbingVector = false
-				log.Printf("Done\n")
-				log.Printf("  begin = (%v, %v)\n", ub.beginX, ub.beginY)
-				log.Printf("    end = (%v, %v)\n", e.X, e.Y)
-				log.Printf("  delta = (%v, %v)\n", e.X-ub.beginX, e.Y-ub.beginY)
+				if ub.chatty {
+					log.Printf("Done\n")
+					log.Printf("  begin = (%v, %v)\n", ub.beginX, ub.beginY)
+					log.Printf("    end = (%v, %v)\n", e.X, e.Y)
+					log.Printf("  delta = (%v, %v)\n", e.X-ub.beginX, e.Y-ub.beginY)
+				}
 				/*
 						On X11, screen points come in as some kind of pixels.
 						As the screen is resized, 0,0 stays the same,
@@ -100,7 +124,9 @@ func (ub *Interpreter) doIt(
 			// After a resize,
 			//   e.X  <= c.WidthPx
 			//   e.Y  <= c.HeightPx
-			log.Printf(" config = (%v, %v)\n", sz.WidthPx, sz.HeightPx)
+			if ub.chatty {
+				log.Printf(" config = (%v, %v)\n", sz.WidthPx, sz.HeightPx)
+			}
 			ub.touchX = float32(sz.WidthPx / 2)
 			ub.touchY = float32(sz.HeightPx / 2)
 			// gm.SetOrigin(touchX, touchY)

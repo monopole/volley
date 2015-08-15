@@ -34,6 +34,7 @@ type vPlayer struct {
 }
 
 type V23Manager struct {
+	chatty               bool
 	ctx                  *context.T
 	shutdown             v23.Shutdown
 	isRunning            bool
@@ -42,7 +43,6 @@ type V23Manager struct {
 	rootName             string
 	namespaceRoot        string
 	relay                *service.Relay
-	chatty               bool
 	myself               *model.Player
 	players              []*vPlayer
 	initialPlayerNumbers []int
@@ -51,17 +51,22 @@ type V23Manager struct {
 	chDoorCommand        chan model.DoorCommand   // Owned, written to.
 }
 
-func NewV23Manager(rootName string, namespaceRoot string) *V23Manager {
+func NewV23Manager(
+	chatty bool, rootName string, namespaceRoot string) *V23Manager {
 	ctx, shutdown := v23.Init()
 	if shutdown == nil {
 		log.Panic("shutdown nil")
 	}
 	return &V23Manager{
-		ctx, shutdown, false, false, false,
-		rootName, namespaceRoot,
-		nil,  // relay
-		true, // chatty
-		nil,  // myself
+		chatty,
+		ctx, shutdown,
+		false, // isRunning
+		false, // isLeftDoorOpen
+		false, // isRightDoorOpen
+		rootName,
+		namespaceRoot,
+		nil, // relay
+		nil, // myself
 		[]*vPlayer{},
 		nil, // initialPlayerNumbers
 		nil, // chBallCommands
@@ -145,6 +150,10 @@ func (gm *V23Manager) recognizeOther(p *model.Player) {
 	}
 }
 
+// Return index k of insertion point for the given player, given
+// players sorted by Id.  The player currently at k-1 is on the 'left'
+// of the argument, while the player at k is on the 'right'.  To
+// insert, right-shift elements at k and above.
 func (gm *V23Manager) findInsertion(p *model.Player) int {
 	for k, member := range gm.players {
 		if p.Id() < member.p.Id() {
@@ -209,13 +218,36 @@ func (gm *V23Manager) checkDoors() {
 		if gm.chatty {
 			log.Printf("I'm somewhere in the middle.\n")
 		}
+		gm.assureDoor(model.DoorCommand{model.Open, model.Left})
+		gm.assureDoor(model.DoorCommand{model.Open, model.Right})
 	}
 	if gm.chatty {
-		log.Printf("       Me: %v.\n", gm.myself)
-		for i, vp := range gm.players {
-			log.Printf("         p[%d] = %v\n", i, vp.p)
-		}
+		log.Println("Players: ", gm.playersString())
 	}
+}
+
+func (gm *V23Manager) playersString() (s string) {
+	k := gm.findInsertion(gm.myself)
+	s = ""
+	for i := 0; i < k; i++ {
+		s += gm.players[i].p.String() + " "
+	}
+	if gm.isLeftDoorOpen {
+		s += "_"
+	} else {
+		s += "["
+	}
+	s += gm.myself.String()
+	if gm.isRightDoorOpen {
+		s += "_"
+	} else {
+		s += "]"
+	}
+	s += " "
+	for i := k; i < len(gm.players); i++ {
+		s += gm.players[i].p.String() + " "
+	}
+	return
 }
 
 func (gm *V23Manager) assureDoor(dc model.DoorCommand) {
@@ -383,10 +415,6 @@ func (gm *V23Manager) tossBall(bc model.BallCommand) {
 	if gm.chatty {
 		log.Printf("Got ball command: %v\n", bc)
 	}
-	// k is where myself should be placed, and the element at k and
-	// everything higher should be right-shifted.  Implication is that
-	// the player currently at k is on my 'right', while the player at
-	// k-1 is on my left.
 	k := gm.findInsertion(gm.myself)
 	wb := serializeBall(bc.B)
 	if bc.D == model.Left {

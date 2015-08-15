@@ -8,8 +8,8 @@ import (
 )
 
 type Table struct {
-	me            *model.Player
 	chatty        bool
+	me            *model.Player
 	screen        *screen.Screen
 	chBallEnter   <-chan *model.Ball       // Not owned, read from.
 	chDoorCommand <-chan model.DoorCommand // Not owned, read from.
@@ -22,6 +22,7 @@ type Table struct {
 }
 
 func NewTable(
+	chatty bool,
 	me *model.Player,
 	s *screen.Screen,
 	chBallEnter <-chan *model.Ball,
@@ -29,7 +30,8 @@ func NewTable(
 	chV23 chan<- chan bool,
 ) *Table {
 	return &Table{
-		me, true, s,
+		chatty,
+		me, s,
 		chBallEnter,
 		chDoorCommand,
 		chV23,
