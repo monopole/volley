@@ -11,6 +11,8 @@ import (
 	"math"
 )
 
+const maxHoldCount = 20
+
 type Interpreter struct {
 	chatty        bool
 	chQuit        chan<- chan bool         // Not owned, written to.
@@ -98,7 +100,7 @@ func (ub *Interpreter) Run(a app.App) {
 					// log.Printf("Touch Moving.\n")
 				}
 			case touch.TypeEnd:
-				if holdCount > 0 && holdCount < 20 {
+				if holdCount > 0 && holdCount <= maxHoldCount {
 					// If they hold on too long, ignore it.
 					dx := float64(e.X - ub.beginX)
 					dy := float64(e.Y - ub.beginY)
@@ -113,23 +115,21 @@ func (ub *Interpreter) Run(a app.App) {
 				}
 				holdCount = 0
 
-				/*
-										On X11, screen points come in as some kind of pixels.
-										As the screen is resized, 0,0 stays the same,
-										but the other numbers change.
+				// On X11, screen points come in as some kind of pixels.  As
+				// the screen is resized, (x,y)==0,0 stays fixed in upper left
+				// corner.
+				//
+				//   (0,0)      ...  (width, 0)
+				//   ...             ...
+				//   (0,height) ...  (width, height)
 
-										(0,0)    ... (high, 0)
-										...          ...
-										(0,high) ... (high, high)
+				// After a resize, the center of the screen is
+				// x = float32(sz.WidthPx / 2)
+				// y = float32(sz.HeightPx / 2)
 
-										After a resize, the center of the screen is
-										x = float32(sz.WidthPx / 2)
-										y = float32(sz.HeightPx / 2)
+				// The width and height come in as integers - but they
+				// seem to be in the same units (pixels).
 
-					          The width and height come in as integers - but they
-					          seem to be in the same units (pixels).
-
-				*/
 			}
 		case size.Event:
 			sz = e

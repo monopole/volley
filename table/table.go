@@ -5,22 +5,27 @@ import (
 	"github.com/monopole/croupier/model"
 	"github.com/monopole/croupier/screen"
 	"log"
+	"math"
 )
 
+// Arbitrary - depends on paint event timing.
+const timeStep = 2
+
 type Table struct {
-	chatty        bool
-	me            *model.Player
-	scn           *screen.Screen
-	screenOn      bool
-	chBallEnter   <-chan *model.Ball       // Not owned, read from.
-	chDoorCommand <-chan model.DoorCommand // Not owned, read from.
-	chV23         chan<- chan bool         // Not owned, written to.
-	chExecCommand chan model.ExecCommand   // Owned, read from.
-	chImpulse     chan *model.Ball         // Owned, read from.
-	chResize      chan model.Vec           // Owned, read from.
-	chQuit        chan chan bool           // Owned, read from.
-	chBallCommand chan model.BallCommand   // Owned, written to.
-	balls         []*model.Ball
+	chatty              bool
+	maxDistSqForImpulse float32
+	me                  *model.Player
+	scn                 *screen.Screen
+	screenOn            bool
+	chBallEnter         <-chan *model.Ball       // Not owned, read from.
+	chDoorCommand       <-chan model.DoorCommand // Not owned, read from.
+	chV23               chan<- chan bool         // Not owned, written to.
+	chExecCommand       chan model.ExecCommand   // Owned, read from.
+	chImpulse           chan *model.Ball         // Owned, read from.
+	chResize            chan model.Vec           // Owned, read from.
+	chQuit              chan chan bool           // Owned, read from.
+	chBallCommand       chan model.BallCommand   // Owned, written to.
+	balls               []*model.Ball
 }
 
 func NewTable(
@@ -33,6 +38,7 @@ func NewTable(
 ) *Table {
 	return &Table{
 		chatty,
+		5000, // maxDistSqForImpulse, start generously
 		me, scn,
 		false, // screenOn
 		chBallEnter,
@@ -89,7 +95,23 @@ func (table *Table) Run() {
 			}
 		case rs := <-table.chResize:
 			if table.chatty {
-				log.Printf("Got resize: %v", rs)
+			}
+			min := rs.Y
+			if rs.X < rs.Y {
+				min = rs.X
+			}
+			// Take a fraction of that characteristic distance,
+			// and use it to define impulse proximity.
+			min = min / 8
+			table.maxDistSqForImpulse = min * min
+			if table.chatty {
+				log.Printf(
+					"Got resize: %v, maxDsqImpulse = %f.2",
+					rs, table.maxDistSqForImpulse)
+			}
+			table.scn.ReSize(rs.X, rs.Y)
+			if len(table.balls) > 0 {
+				table.balls[0].SetPos(rs.X/2, rs.Y/2)
 			}
 		case c := <-table.chExecCommand:
 			switch c {
@@ -101,6 +123,7 @@ func (table *Table) Run() {
 				}
 			case model.ExecPaint:
 				if table.scn != nil && table.screenOn {
+					table.moveBalls()
 					table.scn.Paint(table.balls)
 				}
 			case model.ExecStop:
@@ -116,11 +139,81 @@ func (table *Table) Run() {
 			if table.chatty {
 				log.Printf("Got impulse: %v", impulse)
 			}
-			if len(table.balls) > 0 {
-				b := table.balls[0]
-				b.SetVel(impulse.GetVel().X, impulse.GetVel().Y)
+			closest, ball := table.closestDsq(impulse.GetPos())
+			if ball == nil {
+				if table.chatty {
+					log.Printf("No ball to punch.")
+				}
+				break
+			}
+			if table.chatty {
+				log.Printf("DSQ to ball: %f.1\n", closest)
+			}
+			if closest <= table.maxDistSqForImpulse {
+				if table.chatty {
+					log.Printf("Punching ball.\n")
+				}
+				ball.SetVel(impulse.GetVel().X, impulse.GetVel().Y)
+			} else {
+				if table.chatty {
+					log.Printf("Ball further than %f.1\n",
+						table.maxDistSqForImpulse)
+				}
 			}
 		}
+	}
+}
+
+func (table *Table) closestDsq(im model.Vec) (
+	smallest float32, target *model.Ball) {
+	smallest = math.MaxFloat32
+	target = nil
+	for _, b := range table.balls {
+		dx := im.X - b.GetPos().X
+		dy := im.Y - b.GetPos().Y
+		dsq := dx*dx + dy*dy
+		if dsq < smallest {
+			smallest = dsq
+			target = b
+		}
+	}
+	return
+}
+
+// Screen coordinate system is (x,y)
+//
+//   (0,0)    ... (high, 0)
+//   ...          ...
+//   (0,high) ... (high, high)
+//
+// A positive y velocity is downward.
+//
+func (table *Table) moveBalls() {
+	for _, b := range table.balls {
+		dx := b.GetVel().X
+		dy := b.GetVel().Y
+		nx := b.GetPos().X + timeStep*dx
+		ny := b.GetPos().Y + timeStep*dy
+		if nx <= 0 {
+			// Ball hit left side of screen.
+			nx = 0
+			dx = -dx
+		} else if nx >= table.scn.Width() {
+			// Ball hit right side of screen.
+			nx = table.scn.Width()
+			dx = -dx
+		}
+		if ny <= 0 {
+			// Ball hit top of screen.
+			ny = 0
+			dy = -dy
+		} else if ny >= table.scn.Height() {
+			// Ball hit bottom of screen.
+			ny = table.scn.Height()
+			dy = -dy
+		}
+		b.SetPos(nx, ny)
+		b.SetVel(dx, dy)
 	}
 }
 

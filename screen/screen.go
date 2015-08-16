@@ -1,6 +1,7 @@
 package screen
 
-// Based on https://github.com/golang/mobile/blob/master/example/basic/main.go
+// See
+// https://github.com/golang/mobile/blob/master/example/basic/main.go
 
 import (
 	"encoding/binary"
@@ -52,14 +53,19 @@ func (s *Screen) Start() {
 	s.position = gl.GetAttribLocation(s.program, "position")
 	s.color = gl.GetUniformLocation(s.program, "color")
 	s.offset = gl.GetUniformLocation(s.program, "offset")
-
-	// TODO(crawshaw): the debug package needs to put GL state init here
-	// Can this be an app.RegisterFilter call now??
 }
 
 func (s *Screen) ReSize(width float32, height float32) {
 	s.width = width   // touchX/float32(sz.WidthPx),
 	s.height = height // where sz is size.Event
+}
+
+func (s *Screen) Width() float32 {
+	return s.width
+}
+
+func (s *Screen) Height() float32 {
+	return s.height
 }
 
 func (s *Screen) Paint(balls []*model.Ball) {

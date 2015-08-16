@@ -16,15 +16,21 @@ import (
 
 func main() {
 	app.Main(func(a app.App) {
+		// All v23 dependence here.
 		gm := game.NewV23Manager(
 			config.Chatty, config.RootName, config.NamespaceRoot)
 
-		gm.Initialize() // Calls v23.Init()
+		// Calls v23.Init(), determines current players from MT, etc.
+		gm.Initialize()
 
+		// No GL, mobile or v23.  Contains physics, notion of multiple
+		// screens, etc.  Handles applying impulse to ball, sending
+		// it to another player, etc.
 		table := table.NewTable(
 			config.Chatty,
 			gm.Me(),
-			screen.NewScreen(), // All the GL dependence in here.
+			// All GL dependence in screen (mockable).
+			screen.NewScreen(),
 			gm.ChIncomingBall(),
 			gm.ChDoorCommand(),
 			gm.ChQuit(),
@@ -33,6 +39,7 @@ func main() {
 		go table.Run()
 		go gm.Run(table.ChBallCommand())
 
+		// Event loop - converts KM events to table commands.
 		interpreter.NewInterpreter(
 			config.Chatty,
 			table.ChQuit(),
