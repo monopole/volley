@@ -102,8 +102,8 @@ func (table *Table) Run() {
 			table.handleDoor(dc)
 		case rs := <-table.chResize:
 			if table.scn.Width() < 1 && table.me.Id() == 1 {
-				// Special case - I'm the first player, and
-				// my screen has not resized/rendered yet.
+				// Special case: my screen has not resized/rendered yet, and
+				// i'm the first player.
 				table.firstBall(rs)
 			}
 			table.scn.ReSize(rs.X, rs.Y)
