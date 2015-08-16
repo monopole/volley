@@ -251,20 +251,20 @@ func (table *Table) moveBalls() {
 	}
 	count := 0
 	for _, k := range throwLeft {
-		if table.chatty {
-			log.Printf("Throwing ball %d left.\n", k)
-		}
 		i := k - count
+		if table.chatty {
+			log.Printf("Throwing ball %d left (i=%d, count=%d).\n", k, i, count)
+		}
 		count++
 		b := table.balls[i]
 		table.balls = append(table.balls[:i], table.balls[i+1:]...)
 		table.chBallCommand <- model.BallCommand{b, model.Left}
 	}
 	for _, k := range throwRight {
-		if table.chatty {
-			log.Printf("Throwing ball %d right.\n", k)
-		}
 		i := k - count
+		if table.chatty {
+			log.Printf("Throwing ball %d right (i=%d, count=%d).\n", k, i, count)
+		}
 		count++
 		b := table.balls[i]
 		table.balls = append(table.balls[:i], table.balls[i+1:]...)

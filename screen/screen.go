@@ -83,9 +83,10 @@ func (s *Screen) Paint(balls []*model.Ball) {
 	gl.Uniform4f(s.color, s.gray, 0, s.gray, 1)
 
 	// Move the triangle
-	b := balls[0]
-	gl.Uniform2f(s.offset, b.GetPos().X/s.width, b.GetPos().Y/s.height)
-
+	if len(balls) > 0 {
+		b := balls[0]
+		gl.Uniform2f(s.offset, b.GetPos().X/s.width, b.GetPos().Y/s.height)
+	}
 	gl.BindBuffer(gl.ARRAY_BUFFER, s.buf)
 	gl.EnableVertexAttribArray(s.position)
 	gl.VertexAttribPointer(s.position, coordsPerVertex, gl.FLOAT, false, 0, 0)
