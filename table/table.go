@@ -9,7 +9,7 @@ import (
 )
 
 // Arbitrary - depends on paint event timing.
-const timeStep = 2
+const timeStep = 10
 
 type Table struct {
 	chatty              bool
@@ -17,6 +17,8 @@ type Table struct {
 	me                  *model.Player
 	scn                 *screen.Screen
 	screenOn            bool
+	isLeftDoorOpen      bool
+	isRightDoorOpen     bool
 	chBallEnter         <-chan *model.Ball       // Not owned, read from.
 	chDoorCommand       <-chan model.DoorCommand // Not owned, read from.
 	chV23               chan<- chan bool         // Not owned, written to.
@@ -41,6 +43,8 @@ func NewTable(
 		5000, // maxDistSqForImpulse, start generously
 		me, scn,
 		false, // screenOn
+		false, //	isLeftDoorOpen
+		false, //	isRightDoorOpen
 		chBallEnter,
 		chDoorCommand,
 		chV23,
@@ -93,23 +97,27 @@ func (table *Table) Run() {
 			if table.chatty {
 				log.Printf("Received door command: %v", dc)
 			}
+			if dc.S == model.Open {
+				if dc.D == model.Left {
+					table.isLeftDoorOpen = true
+				} else {
+					table.isRightDoorOpen = true
+				}
+			} else {
+				if dc.D == model.Left {
+					table.isLeftDoorOpen = false
+				} else {
+					table.isRightDoorOpen = false
+				}
+			}
 		case rs := <-table.chResize:
-			if table.chatty {
-			}
-			min := rs.Y
-			if rs.X < rs.Y {
-				min = rs.X
-			}
-			// Take a fraction of that characteristic distance,
-			// and use it to define impulse proximity.
-			min = min / 8
-			table.maxDistSqForImpulse = min * min
+			table.scn.ReSize(rs.X, rs.Y)
+			table.resetImpulseLimit()
 			if table.chatty {
 				log.Printf(
-					"Got resize: %v, maxDsqImpulse = %f.2",
+					"resize: %v, maxDsqImpulse = %f.2",
 					rs, table.maxDistSqForImpulse)
 			}
-			table.scn.ReSize(rs.X, rs.Y)
 			if len(table.balls) > 0 {
 				table.balls[0].SetPos(rs.X/2, rs.Y/2)
 			}
@@ -164,6 +172,18 @@ func (table *Table) Run() {
 	}
 }
 
+// Use fraction of characteristic screen size
+// to define max distance over which an impulse
+// is considered to have 'hit' a ball.
+func (table *Table) resetImpulseLimit() {
+	max := table.scn.Height()
+	if table.scn.Width() > max {
+		max = table.scn.Width()
+	}
+	max = max / 4
+	table.maxDistSqForImpulse = max * max
+}
+
 func (table *Table) closestDsq(im model.Vec) (
 	smallest float32, target *model.Ball) {
 	smallest = math.MaxFloat32
@@ -180,28 +200,42 @@ func (table *Table) closestDsq(im model.Vec) (
 	return
 }
 
-// Screen coordinate system is (x,y)
-//
-//   (0,0)    ... (high, 0)
-//   ...          ...
-//   (0,high) ... (high, high)
-//
+// On X11, screen points come in as some notion of pixels.  As
+// the screen is resized, (x,y)==0,0 stays fixed in upper left
+// corner.
+//   (0,0)      ...  (width, 0)
+//   ...             ...
+//   (0,height) ...  (width, height)
 // A positive y velocity is downward.
-//
+// Screen center is (width/2, height/2).
+// The width and height come in as integers - but they
+// seem to be in the same units (pixels).
 func (table *Table) moveBalls() {
-	for _, b := range table.balls {
+	throwLeft := []int{}
+	throwRight := []int{}
+	for i, b := range table.balls {
 		dx := b.GetVel().X
 		dy := b.GetVel().Y
 		nx := b.GetPos().X + timeStep*dx
 		ny := b.GetPos().Y + timeStep*dy
 		if nx <= 0 {
 			// Ball hit left side of screen.
-			nx = 0
-			dx = -dx
+			if table.isLeftDoorOpen {
+				throwLeft = append(throwLeft, i)
+				nx = table.scn.Width()
+			} else {
+				nx = 0
+				dx = -dx
+			}
 		} else if nx >= table.scn.Width() {
 			// Ball hit right side of screen.
-			nx = table.scn.Width()
-			dx = -dx
+			if table.isRightDoorOpen {
+				throwRight = append(throwRight, i)
+				nx = 0
+			} else {
+				nx = table.scn.Width()
+				dx = -dx
+			}
 		}
 		if ny <= 0 {
 			// Ball hit top of screen.
@@ -214,6 +248,27 @@ func (table *Table) moveBalls() {
 		}
 		b.SetPos(nx, ny)
 		b.SetVel(dx, dy)
+	}
+	count := 0
+	for _, k := range throwLeft {
+		if table.chatty {
+			log.Printf("Throwing ball %d left.\n", k)
+		}
+		i := k - count
+		count++
+		b := table.balls[i]
+		table.balls = append(table.balls[:i], table.balls[i+1:]...)
+		table.chBallCommand <- model.BallCommand{b, model.Left}
+	}
+	for _, k := range throwRight {
+		if table.chatty {
+			log.Printf("Throwing ball %d right.\n", k)
+		}
+		i := k - count
+		count++
+		b := table.balls[i]
+		table.balls = append(table.balls[:i], table.balls[i+1:]...)
+		table.chBallCommand <- model.BallCommand{b, model.Right}
 	}
 }
 

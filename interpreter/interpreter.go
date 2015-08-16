@@ -114,22 +114,6 @@ func (ub *Interpreter) Run(a app.App) {
 					}
 				}
 				holdCount = 0
-
-				// On X11, screen points come in as some kind of pixels.  As
-				// the screen is resized, (x,y)==0,0 stays fixed in upper left
-				// corner.
-				//
-				//   (0,0)      ...  (width, 0)
-				//   ...             ...
-				//   (0,height) ...  (width, height)
-
-				// After a resize, the center of the screen is
-				// x = float32(sz.WidthPx / 2)
-				// y = float32(sz.HeightPx / 2)
-
-				// The width and height come in as integers - but they
-				// seem to be in the same units (pixels).
-
 			}
 		case size.Event:
 			sz = e
