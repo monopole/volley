@@ -56,8 +56,8 @@ func (s *Screen) Start() {
 }
 
 func (s *Screen) ReSize(width float32, height float32) {
-	s.width = width   // touchX/float32(sz.WidthPx),
-	s.height = height // where sz is size.Event
+	s.width = width
+	s.height = height
 }
 
 func (s *Screen) Width() float32 {
@@ -69,7 +69,6 @@ func (s *Screen) Height() float32 {
 }
 
 func (s *Screen) Paint(balls []*model.Ball) {
-
 	gl.ClearColor(s.red, s.green, s.blue, 1)
 	gl.Clear(gl.COLOR_BUFFER_BIT)
 
@@ -79,10 +78,8 @@ func (s *Screen) Paint(balls []*model.Ball) {
 	if s.gray > 1 {
 		s.gray = 0
 	}
-	// Color the triangle
 	gl.Uniform4f(s.color, s.gray, 0, s.gray, 1)
 
-	// Move the triangle
 	if len(balls) > 0 {
 		b := balls[0]
 		gl.Uniform2f(s.offset, b.GetPos().X/s.width, b.GetPos().Y/s.height)

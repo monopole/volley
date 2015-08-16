@@ -11,12 +11,16 @@ import (
 // Arbitrary - depends on paint event timing.
 const timeStep = 10
 
+// Start with generous slop.
+const defaultMaxDistSqForImpulse = 5000
+
 type Table struct {
 	chatty              bool
 	maxDistSqForImpulse float32
 	me                  *model.Player
 	scn                 *screen.Screen
 	screenOn            bool
+	isGravity           bool
 	isLeftDoorOpen      bool
 	isRightDoorOpen     bool
 	chBallEnter         <-chan *model.Ball       // Not owned, read from.
@@ -40,9 +44,10 @@ func NewTable(
 ) *Table {
 	return &Table{
 		chatty,
-		5000, // maxDistSqForImpulse, start generously
+		defaultMaxDistSqForImpulse,
 		me, scn,
 		false, // screenOn
+		false, // isGravity
 		false, //	isLeftDoorOpen
 		false, //	isRightDoorOpen
 		chBallEnter,
@@ -53,8 +58,8 @@ func NewTable(
 		make(chan model.Vec),
 		make(chan chan bool),
 		make(chan model.BallCommand),
-		// Every player starts with their own ball.
-		[]*model.Ball{model.NewBall(me, model.Vec{0, 0}, model.Vec{0, 0})}}
+		[]*model.Ball{},
+	}
 }
 
 func (table *Table) ChBallCommand() <-chan model.BallCommand {
@@ -94,32 +99,19 @@ func (table *Table) Run() {
 		case b := <-table.chBallEnter:
 			table.balls = append(table.balls, b)
 		case dc := <-table.chDoorCommand:
-			if table.chatty {
-				log.Printf("Received door command: %v", dc)
-			}
-			if dc.S == model.Open {
-				if dc.D == model.Left {
-					table.isLeftDoorOpen = true
-				} else {
-					table.isRightDoorOpen = true
-				}
-			} else {
-				if dc.D == model.Left {
-					table.isLeftDoorOpen = false
-				} else {
-					table.isRightDoorOpen = false
-				}
-			}
+			table.handleDoor(dc)
 		case rs := <-table.chResize:
+			if table.scn.Width() < 1 && table.me.Id() == 1 {
+				// Special case - I'm the first player, and
+				// my screen has not resized/rendered yet.
+				table.firstBall(rs)
+			}
 			table.scn.ReSize(rs.X, rs.Y)
 			table.resetImpulseLimit()
 			if table.chatty {
 				log.Printf(
 					"resize: %v, maxDsqImpulse = %f.2",
 					rs, table.maxDistSqForImpulse)
-			}
-			if len(table.balls) > 0 {
-				table.balls[0].SetPos(rs.X/2, rs.Y/2)
 			}
 		case c := <-table.chExecCommand:
 			switch c {
@@ -140,34 +132,72 @@ func (table *Table) Run() {
 				}
 			}
 		case impulse := <-table.chImpulse:
-			// Find the ball closest to the impulse and
-			// within a reasonable range,
-			// apply new velocity to the ball.
-			// For now, just pick the zero ball.
-			if table.chatty {
-				log.Printf("Got impulse: %v", impulse)
-			}
-			closest, ball := table.closestDsq(impulse.GetPos())
-			if ball == nil {
-				if table.chatty {
-					log.Printf("No ball to punch.")
-				}
-				break
-			}
-			if table.chatty {
-				log.Printf("DSQ to ball: %f.1\n", closest)
-			}
-			if closest <= table.maxDistSqForImpulse {
-				if table.chatty {
-					log.Printf("Punching ball.\n")
-				}
-				ball.SetVel(impulse.GetVel().X, impulse.GetVel().Y)
-			} else {
-				if table.chatty {
-					log.Printf("Ball further than %f.1\n",
-						table.maxDistSqForImpulse)
-				}
-			}
+			table.applyImpulse(impulse)
+		}
+	}
+}
+
+func (table *Table) firstBall(rs model.Vec) {
+	if table.chatty {
+		log.Printf("Making the first ball.")
+	}
+	if len(table.balls) > 0 {
+		log.Panic("There should be zero balls now.")
+	}
+	table.balls = append(
+		table.balls,
+		model.NewBall(
+			table.me,
+			model.Vec{rs.X / 2, rs.Y / 2},
+			model.Vec{0, 0}))
+}
+
+func (table *Table) handleDoor(dc model.DoorCommand) {
+	if table.chatty {
+		log.Printf("Received door command: %v", dc)
+	}
+	if dc.S == model.Open {
+		if dc.D == model.Left {
+			table.isLeftDoorOpen = true
+		} else {
+			table.isRightDoorOpen = true
+		}
+	} else {
+		if dc.D == model.Left {
+			table.isLeftDoorOpen = false
+		} else {
+			table.isRightDoorOpen = false
+		}
+	}
+}
+
+func (table *Table) applyImpulse(impulse *model.Ball) {
+	// Find the ball closest to the impulse and
+	// within a reasonable range,
+	// apply new velocity to the ball.
+	// For now, just pick the zero ball.
+	if table.chatty {
+		log.Printf("Got impulse: %v", impulse)
+	}
+	closest, ball := table.closestDsq(impulse.GetPos())
+	if ball == nil {
+		if table.chatty {
+			log.Printf("No ball to punch.")
+		}
+		return
+	}
+	if table.chatty {
+		log.Printf("DSQ to ball: %f.1\n", closest)
+	}
+	if closest <= table.maxDistSqForImpulse {
+		if table.chatty {
+			log.Printf("Punching ball.\n")
+		}
+		ball.SetVel(impulse.GetVel().X, impulse.GetVel().Y)
+	} else {
+		if table.chatty {
+			log.Printf("Ball further than %f.1\n",
+				table.maxDistSqForImpulse)
 		}
 	}
 }
@@ -216,6 +246,9 @@ func (table *Table) moveBalls() {
 	for i, b := range table.balls {
 		dx := b.GetVel().X
 		dy := b.GetVel().Y
+		if table.isGravity {
+			// TODO
+		}
 		nx := b.GetPos().X + timeStep*dx
 		ny := b.GetPos().Y + timeStep*dy
 		if nx <= 0 {
