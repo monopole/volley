@@ -2,6 +2,7 @@
 
 // Hacked up version of
 // https://godoc.org/golang.org/x/mobile/example/basic
+// https://github.com/golang/mobile/tree/master/example
 
 package main
 
@@ -12,10 +13,28 @@ import (
 	"github.com/monopole/croupier/screen"
 	"github.com/monopole/croupier/table"
 	"golang.org/x/mobile/app"
+	"log"
+	"net/http"
 )
 
+func gotNetwork() bool {
+	_, err := http.Get(config.TestDomain)
+	if err == nil {
+		log.Printf("Was able to hit %s", config.TestDomain)
+		return true
+	}
+	log.Printf("Something wrong with network: %v", err)
+	return false
+}
+
 func main() {
+	if config.FailFast {
+		if !gotNetwork() {
+			return
+		}
+	}
 	app.Main(func(a app.App) {
+
 		// All v23 dependence here.
 		gm := game.NewV23Manager(
 			config.Chatty, config.RootName, config.NamespaceRoot)

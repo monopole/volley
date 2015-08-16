@@ -12,6 +12,7 @@ import (
 )
 
 const maxHoldCount = 20
+const magicButtonSideLength = 100
 
 type Interpreter struct {
 	chatty        bool
@@ -87,7 +88,7 @@ func (ub *Interpreter) Run(a app.App) {
 				}
 				ub.beginX = e.X
 				ub.beginY = e.Y
-				if e.X < 10 && e.Y < 10 {
+				if e.X < magicButtonSideLength && e.Y < magicButtonSideLength {
 					if ub.chatty {
 						log.Printf("Touched shutdown spot.\n")
 					}

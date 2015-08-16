@@ -53,13 +53,10 @@ type V23Manager struct {
 
 func NewV23Manager(
 	chatty bool, rootName string, namespaceRoot string) *V23Manager {
-	ctx, shutdown := v23.Init()
-	if shutdown == nil {
-		log.Panic("shutdown nil")
-	}
 	return &V23Manager{
 		chatty,
-		ctx, shutdown,
+		nil,   // ctx
+		nil,   // shutdown
 		false, // isRunning
 		false, // isLeftDoorOpen
 		false, // isRightDoorOpen
@@ -77,11 +74,21 @@ func NewV23Manager(
 
 func (gm *V23Manager) Initialize() {
 	if gm.chatty {
+		log.Printf("calling v23.Init")
+	}
+	gm.ctx, gm.shutdown = v23.Init()
+	if gm.shutdown == nil {
+		log.Panic("shutdown nil")
+	}
+	if gm.chatty {
 		log.Printf("Scanning namespace %v\n", gm.namespaceRoot)
 	}
 	v23.GetNamespace(gm.ctx).SetRoots(gm.namespaceRoot)
 
 	gm.initialPlayerNumbers = gm.playerNumbers()
+	if gm.chatty {
+		log.Printf("Found %d players.\n", len(gm.initialPlayerNumbers))
+	}
 	sort.Ints(gm.initialPlayerNumbers)
 	myId := 1
 	if len(gm.initialPlayerNumbers) > 0 {

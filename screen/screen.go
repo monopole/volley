@@ -37,8 +37,8 @@ func (s *Screen) Start() {
 	var err error
 
 	s.red = 0.1
-	s.green = 0.8
-	s.blue = 0.4
+	s.green = 0.1
+	s.blue = 0.1
 
 	s.program, err = glutil.CreateProgram(vertexShader, fragmentShader)
 	if err != nil {
