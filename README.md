@@ -44,9 +44,11 @@ adb version
 
 ### Setup for iOS development
 
-_TBD_
+* `xcode-select --install`
+* Get git from [http://git-scm.com/download/mac]
+* remainder _TBD_
 
-### Install go 1.5 beta
+### Install Go 1.5 beta
 
 Go 1.5 required (still beta as of July 2015).
 
@@ -70,6 +72,7 @@ git clone https://go.googlesource.com/go
 cd go
 git checkout master
 cd src
+# GOROOT_BOOTSTRAP=/usr/local/go ./all.bash
 GOROOT_BOOTSTRAP=$HOME/go1.4.2 ./all.bash
 ```
 
@@ -89,6 +92,7 @@ pointed to by `VEGGIE`.
 
 ```
 export VEGGIE=~/pumpkin
+PATH=$VEGGIE/bin:$PATH
 ```
 
 Optionally wipe it
@@ -123,7 +127,7 @@ sudo apt-get install libegl1-mesa-dev libgles2-mesa-dev libx11-dev
 
 ```
 GOPATH=$VEGGIE go get golang.org/x/mobile/cmd/gomobile
-GOPATH=$VEGGIE $VEGGIE/bin/gomobile init
+GOPATH=$VEGGIE gomobile init
 ```
 
 ## Install game software
@@ -162,30 +166,32 @@ GOPATH=$VEGGIE go install $GITDIR/volley
 
 Check the namespace:
 ```
-$VEGGIE/bin/namespace --v23.namespace.root /104.197.96.113:3389 glob -l '*/*'
+namespace --v23.namespace.root /104.197.96.113:3389 glob -l '*/*'
 ```
 
 Open another terminal and run
 ```
-$VEGGIE/bin/volley
+volley
 ```
 
-__REMAINING DOC OUT OF DATE PENDING NEW STUFF COMING__
 
 You should see a new window with a triangle.
 
 Open yet _another_ terminal and run
 ```
-$VEGGIE/bin/volley
+volley
 ```
-This window should not have a triangle.
+
+This window should not have a triangle in the center, though
+it might have some artifacts on the side.
 
 Drag the triangle in the first window.
 On release, it should hop to the second window.
 It should be possible to send it back.
 
 
-The `namespace` command above should now show two entries: `volley/player0001` and `volley/player0002`
+The `namespace` command above should now show two entries:
+`volley/player0001` and `volley/player0002`
 
 __To run with more than two devices (a 'device' == a desktop terminal
 or an app running on a phone), one must change the the constant
@@ -204,7 +210,7 @@ Plug your dev phone into a USB port.
 Enter this:
 
 ```
-GOPATH=$VEGGIE $VEGGIE/bin/gomobile install $GITDIR/volley
+GOPATH=$VEGGIE gomobile install $GITDIR/volley
 ```
 
 You should see a triangle (or not) depending on the order in which you launched it with
