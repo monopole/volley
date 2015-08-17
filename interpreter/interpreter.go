@@ -44,7 +44,7 @@ func NewInterpreter(
 }
 
 func (ub *Interpreter) quit() {
-	ub.chExecCommand <- model.ExecStop
+	// Tell the table to stop.
 	ch := make(chan bool)
 	ub.chQuit <- ch
 	<-ch

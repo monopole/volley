@@ -126,10 +126,6 @@ func (table *Table) Run() {
 					table.moveBalls()
 					table.scn.Paint(table.balls)
 				}
-			case model.ExecStop:
-				if table.scn != nil && table.screenOn {
-					table.scn.Stop()
-				}
 			}
 		case impulse := <-table.chImpulse:
 			table.applyImpulse(impulse)
@@ -282,6 +278,45 @@ func (table *Table) moveBalls() {
 		b.SetPos(nx, ny)
 		b.SetVel(dx, dy)
 	}
+	table.throwBalls(throwLeft, throwRight)
+}
+
+func (table *Table) discardBalls() {
+	if !table.isLeftDoorOpen && !table.isRightDoorOpen {
+		// Nowhere to discard balls.
+		return
+	}
+	throwLeft := []int{}
+	throwRight := []int{}
+	for i, b := range table.balls {
+		nx := b.GetPos().X
+		if b.GetVel().X <= 0 {
+			if table.isLeftDoorOpen {
+				throwLeft = append(throwLeft, i)
+				nx = table.scn.Width()
+			} else {
+				if table.isRightDoorOpen {
+					throwRight = append(throwRight, i)
+					nx = 0
+				}
+			}
+		} else {
+			if table.isRightDoorOpen {
+				throwRight = append(throwRight, i)
+				nx = 0
+			} else {
+				if table.isLeftDoorOpen {
+					throwLeft = append(throwLeft, i)
+					nx = table.scn.Width()
+				}
+			}
+		}
+		b.SetPos(nx, b.GetPos().Y)
+	}
+	table.throwBalls(throwLeft, throwRight)
+}
+
+func (table *Table) throwBalls(throwLeft, throwRight []int) {
 	count := 0
 	for _, k := range throwLeft {
 		i := k - count
@@ -309,12 +344,17 @@ func (table *Table) quit() {
 	if table.chatty {
 		log.Println("Table quitting.")
 	}
+	table.discardBalls()
 	// Closing this channel seems to trigger a ball?
 	// close(table.chBallCommand)
 	if table.chatty {
 		log.Println("Sending shutdown to v23.")
 	}
+	// Wait for the v23 manager to shutdown.
 	ch := make(chan bool)
 	table.chV23 <- ch
 	<-ch
+	if table.scn != nil && table.screenOn {
+		table.scn.Stop()
+	}
 }

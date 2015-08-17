@@ -10,7 +10,6 @@ type ExecCommand int
 const (
 	ExecError ExecCommand = iota
 	ExecStart
-	ExecStop
 	ExecRandomImpulse
 	ExecPaint
 )
