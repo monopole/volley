@@ -133,12 +133,12 @@ Create and fill `$VEGGIE/src/github.com/monopole/croupier`.
 Ignore complaints about _No buildable Go source_.
 
 ```
-gitdir=github.com/monopole/croupier
+GITDIR=github.com/monopole/croupier
 ```
 
 Grab the code:
 ```
-GOPATH=$VEGGIE go get -d ${gitdir}
+GOPATH=$VEGGIE go get -d $GITDIR
 ```
 
 Generate the Go that was missing and build the v23 fortune server
@@ -147,14 +147,7 @@ and client stuff.
 ```
 VDLROOT=$VEGGIE/src/v.io/v23/vdlroot \
     VDLPATH=$VEGGIE/src \
-    $VEGGIE/bin/vdl generate --lang go $VEGGIE/src/${gitdir}/ifc
-
-GOPATH=$VEGGIE go build ${gitdir}/ifc
-GOPATH=$VEGGIE go build ${gitdir}/service
-GOPATH=$VEGGIE go build ${gitdir}/game
-# GOPATH=$VEGGIE go build ${gitdir}/screen
-GOPATH=$VEGGIE go build ${gitdir}
-GOPATH=$VEGGIE go install ${gitdir}
+    $VEGGIE/bin/vdl generate --lang go $VEGGIE/src/$GITDIR/ifc
 ```
 
 ## Test desktop mode
@@ -164,24 +157,26 @@ This app is a small modification of the
 [gomobile basic example](https://godoc.org/golang.org/x/mobile/example/basic).
 
 ```
-GOPATH=$VEGGIE go install ${gitdir}/croupier
+GOPATH=$VEGGIE go install $GITDIR/volley
 ```
 
-Check the namespace, make sure there's nothing that looks like `croupier*`
+Check the namespace:
 ```
-$VEGGIE/bin/namespace --v23.namespace.root '/104.197.96.113:3389' glob  'croupier*'
+$VEGGIE/bin/namespace --v23.namespace.root /104.197.96.113:3389 glob -l '*/*'
 ```
 
 Open another terminal and run
 ```
-$VEGGIE/bin/croupier 
+$VEGGIE/bin/volley
 ```
+
+__REMAINING DOC OUT OF DATE PENDING NEW STUFF COMING__
 
 You should see a new window with a triangle.
 
 Open yet _another_ terminal and run
 ```
-$VEGGIE/bin/croupier 
+$VEGGIE/bin/volley
 ```
 This window should not have a triangle.
 
@@ -189,7 +184,8 @@ Drag the triangle in the first window.
 On release, it should hop to the second window.
 It should be possible to send it back.
 
-The `namespace` command above should now show two services, `croupier0` and `croupier1`
+
+The `namespace` command above should now show two entries: `volley/player0001` and `volley/player0002`
 
 __To run with more than two devices (a 'device' == a desktop terminal
 or an app running on a phone), one must change the the constant
@@ -208,7 +204,7 @@ Plug your dev phone into a USB port.
 Enter this:
 
 ```
-GOPATH=$VEGGIE:~/pumpkin $VEGGIE/bin/gomobile install ${gitdir}/croupier
+GOPATH=$VEGGIE $VEGGIE/bin/gomobile install $GITDIR/volley
 ```
 
 You should see a triangle (or not) depending on the order in which you launched it with
