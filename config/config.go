@@ -9,9 +9,13 @@
 // adb devices
 // adb logcat | grep GoLog
 //
-// $VEGGIE/bin/mounttabled --v23.tcp.address :23000 &
+// export GITDIR=github.com/monopole/croupier
 //
-// $VEGGIE/bin/namespace --v23.namespace.root '/localhost:23000' glob -l '*/*'
+// $VEGGIE/bin/mounttabled --v23.tcp.address :23000 &
+// export MT_HOST=192.168.43.136
+// $VEGGIE/bin/namespace --v23.namespace.root /${MT_HOST}:23000 glob -l '*/*'
+//
+// GOPATH=$VEGGIE $VEGGIE/bin/gomobile install $GITDIR/volley
 //
 // $VEGGIE/bin/beans
 
@@ -21,13 +25,14 @@ const Chatty = true
 
 const RootName = "volley/player"
 
-// const MountTableHost = "localhost"
-// const MountTableHost = "104.197.96.113"
-// const MountTableHost = "172.17.166.64"
-// const MountTableHost = "192.168.2.71"
+const MountTableHost = "104.197.96.113" // Asim's gce instance
 
-const MountTableHost = "192.168.43.136"
-const MountTablePort = "23000"
+// const MountTableHost = "172.17.166.64" // ?
+// const MountTableHost = "192.168.2.71"  // my laptop on house net
+// const MountTableHost = "192.168.43.136" // my latop on motox net
+
+// const MountTablePort = "23000"
+const MountTablePort = "3389"
 
 const NamespaceRoot = "/" + MountTableHost + ":" + MountTablePort
 

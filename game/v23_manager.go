@@ -74,14 +74,14 @@ func NewV23Manager(
 
 func (gm *V23Manager) Initialize() {
 	if gm.chatty {
-		log.Printf("calling v23.Init")
+		log.Printf("Calling v23.Init")
 	}
 	gm.ctx, gm.shutdown = v23.Init()
 	if gm.shutdown == nil {
 		log.Panic("shutdown nil")
 	}
 	if gm.chatty {
-		log.Printf("Scanning namespace %v\n", gm.namespaceRoot)
+		log.Printf("Setting root to %v\n", gm.namespaceRoot)
 	}
 	v23.GetNamespace(gm.ctx).SetRoots(gm.namespaceRoot)
 
@@ -354,17 +354,35 @@ func (gm *V23Manager) playerNumbers() (list []int) {
 	list = []int{}
 	rCtx, cancel := context.WithTimeout(gm.ctx, time.Minute)
 	defer cancel()
+	if gm.chatty {
+		log.Printf("Recovering namespace.")
+	}
 	ns := v23.GetNamespace(rCtx)
+	if gm.chatty {
+		log.Printf("ns == %v", ns)
+	}
 	pattern := gm.rootName + "*"
+	if gm.chatty {
+		log.Printf("Calling glob with rCtx=%v, pattern=%v\n", rCtx, pattern)
+	}
 	c, err := ns.Glob(rCtx, pattern)
 	if err != nil {
 		log.Printf("ns.Glob(%q) failed: %v", pattern, err)
 		return
 	}
+	if gm.chatty {
+		log.Printf("Done with Glob request; awaiting channel.")
+	}
 	for res := range c {
+		if gm.chatty {
+			log.Printf("Got a result: %v\n", res)
+		}
 		switch v := res.(type) {
 		case *naming.GlobReplyEntry:
 			name := v.Value.Name
+			if gm.chatty {
+				log.Printf("Raw name is: %v\n", name)
+			}
 			if name != "" {
 				putativeNumber := name[len(gm.rootName):]
 				n, err := strconv.ParseInt(putativeNumber, 10, 32)
