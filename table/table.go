@@ -321,7 +321,7 @@ func (table *Table) throwBalls(throwLeft, throwRight []int) {
 	for _, k := range throwLeft {
 		i := k - count
 		if table.chatty {
-			log.Printf("Throwing ball %d left (i=%d, count=%d).\n", k, i, count)
+			log.Printf("Throwing ball left (i=%d, k=%d, count=%d).\n", i, k, count)
 		}
 		count++
 		b := table.balls[i]
@@ -331,7 +331,7 @@ func (table *Table) throwBalls(throwLeft, throwRight []int) {
 	for _, k := range throwRight {
 		i := k - count
 		if table.chatty {
-			log.Printf("Throwing ball %d right (i=%d, count=%d).\n", k, i, count)
+			log.Printf("Throwing ball right (i=%d, k=%d, count=%d).\n", i, k, count)
 		}
 		count++
 		b := table.balls[i]

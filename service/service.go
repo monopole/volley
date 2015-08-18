@@ -6,8 +6,10 @@
 package service
 
 import (
+	"github.com/monopole/croupier/config"
 	"github.com/monopole/croupier/ifc"
 	"github.com/monopole/croupier/model"
+	"log"
 	"v.io/v23/context"
 	"v.io/v23/rpc"
 )
@@ -54,28 +56,42 @@ func (x *Relay) ChIncomingBall() <-chan *model.Ball {
 }
 
 func (x *Relay) Recognize(_ *context.T, _ rpc.ServerCall, p ifc.Player) error {
+	log.Printf("Accepting recognize request from player %v", p)
 	player := model.NewPlayer(int(p.Id))
 	go func() {
+		if config.Chatty {
+			log.Printf("Enchanneling newly recognized player = %v", player)
+		}
 		x.chRecognize <- player
 	}()
 	return nil
 }
 
 func (x *Relay) Forget(_ *context.T, _ rpc.ServerCall, p ifc.Player) error {
+	log.Printf("Accepting forget request from player %v", p)
 	player := model.NewPlayer(int(p.Id))
 	go func() {
+		if config.Chatty {
+			log.Printf("Enchanneling player to forget = %v", player)
+		}
 		x.chForget <- player
 	}()
 	return nil
 }
 
 func (x *Relay) Accept(_ *context.T, _ rpc.ServerCall, b ifc.Ball) error {
+	if config.Chatty {
+		log.Printf("Accepting a ball!")
+	}
 	player := model.NewPlayer(int(b.Owner.Id))
 	ball := model.NewBall(
 		player,
 		model.Vec{b.X, b.Y},
 		model.Vec{b.Dx, b.Dy})
 	go func() {
+		if config.Chatty {
+			log.Printf("Enchanneling ball = %v", b)
+		}
 		x.chIncomingBall <- ball
 	}()
 	return nil

@@ -81,13 +81,13 @@ func (gm *V23Manager) Initialize() {
 		log.Panic("shutdown nil")
 	}
 	if gm.chatty {
-		log.Printf("Setting root to %v\n", gm.namespaceRoot)
+		log.Printf("Setting root to %v", gm.namespaceRoot)
 	}
 	v23.GetNamespace(gm.ctx).SetRoots(gm.namespaceRoot)
 
 	gm.initialPlayerNumbers = gm.playerNumbers()
 	if gm.chatty {
-		log.Printf("Found %d players.\n", len(gm.initialPlayerNumbers))
+		log.Printf("Found %d players.", len(gm.initialPlayerNumbers))
 	}
 	sort.Ints(gm.initialPlayerNumbers)
 	myId := 1
@@ -135,7 +135,7 @@ func (gm *V23Manager) serverName(n int) string {
 
 func (gm *V23Manager) recognizeOther(p *model.Player) {
 	if gm.chatty {
-		log.Printf("me=%v recognizing %v.", gm.Me(), p)
+		log.Printf("I (%v) am recognizing %v.", gm.Me(), p)
 	}
 	vp := &vPlayer{p, ifc.GameBuddyClient(gm.serverName(p.Id()))}
 
@@ -146,7 +146,7 @@ func (gm *V23Manager) recognizeOther(p *model.Player) {
 	gm.players[k] = vp
 
 	if gm.chatty {
-		log.Printf("me=%v has recognized %v.", gm.Me(), p)
+		log.Printf("I (%v) has recognized %v.", gm.Me(), p)
 	}
 	if gm.isRunning {
 		gm.checkDoors()
@@ -205,7 +205,7 @@ func (gm *V23Manager) checkDoors() {
 	}
 	if len(gm.players) == 0 {
 		if gm.chatty {
-			log.Printf("I'm the only player.\n")
+			log.Printf("I'm the only player.")
 		}
 		gm.assureDoor(model.DoorCommand{model.Closed, model.Left})
 		gm.assureDoor(model.DoorCommand{model.Closed, model.Right})
@@ -229,7 +229,7 @@ func (gm *V23Manager) checkDoors() {
 		gm.assureDoor(model.DoorCommand{model.Open, model.Right})
 	}
 	if gm.chatty {
-		log.Println("Players: ", gm.playersString())
+		log.Println("String with all players: ", gm.playersString())
 	}
 }
 
@@ -309,12 +309,15 @@ func (gm *V23Manager) assureDoor(dc model.DoorCommand) {
 
 func (gm *V23Manager) sayHelloToEveryone() {
 	if gm.chatty {
-		log.Printf("Me (%v) saying Hello to everyone.\n", gm.Me())
+		log.Printf("Me (%v) saying Hello to %d other players.\n",
+			gm.Me(), len(gm.players))
 	}
 	wp := ifc.Player{int32(gm.Me().Id())}
 	for _, vp := range gm.players {
 		if gm.chatty {
-			log.Printf("Asking %v to recognize me=%v\n", vp.p, gm.Me())
+			log.Printf("Asking %v to recognize me=%v", vp, gm.Me())
+			log.Printf("  gm.ctx %T = %v", gm.ctx, gm.ctx)
+			log.Printf("  wp %T = %v", wp, wp)
 		}
 		if err := vp.c.Recognize(
 			gm.ctx, wp,
@@ -322,11 +325,11 @@ func (gm *V23Manager) sayHelloToEveryone() {
 			log.Panic("Recognize failed: ", err)
 		}
 		if gm.chatty {
-			log.Printf("Recognize call completed.")
+			log.Printf("Recognize call completed!")
 		}
 	}
 	if gm.chatty {
-		log.Printf("Me (%v) DONE saying Hello to everyone.\n", gm.Me())
+		log.Printf("Me (%v) DONE saying Hello.\n", gm.Me())
 	}
 }
 
@@ -359,15 +362,15 @@ func (gm *V23Manager) playerNumbers() (list []int) {
 	}
 	ns := v23.GetNamespace(rCtx)
 	if gm.chatty {
-		log.Printf("ns == %v", ns)
+		log.Printf("namespace == %T %v", ns, ns)
 	}
 	pattern := gm.rootName + "*"
 	if gm.chatty {
-		log.Printf("Calling glob with rCtx=%v, pattern=%v\n", rCtx, pattern)
+		log.Printf("Calling glob with %T=%v, pattern=%v\n", rCtx, rCtx, pattern)
 	}
 	c, err := ns.Glob(rCtx, pattern)
 	if err != nil {
-		log.Printf("ns.Glob(%q) failed: %v", pattern, err)
+		log.Printf("ns.Glob(%v) failed: %v", pattern, err)
 		return
 	}
 	if gm.chatty {
@@ -397,6 +400,9 @@ func (gm *V23Manager) playerNumbers() (list []int) {
 			}
 		default:
 		}
+	}
+	if gm.chatty {
+		log.Printf("Glob result channel exhausted.")
 	}
 	return
 }
@@ -439,38 +445,41 @@ func serializeBall(b *model.Ball) ifc.Ball {
 
 func (gm *V23Manager) tossBall(bc model.BallCommand) {
 	if gm.chatty {
-		log.Printf("Got ball command: %v\n", bc)
+		log.Printf("v23 manager got ball throw command: %v\n", bc)
 	}
 	k := gm.findInsertion(gm.myself)
 	wb := serializeBall(bc.B)
+	log.Printf("Ball = %v", wb)
 	if bc.D == model.Left {
 		// Throw ball left.
 		k--
 		if k >= 0 {
 			vp := gm.players[k]
+			log.Printf("Attempting RPC to throw ball left to %v : %v\n", vp.p, vp.c)
 			if err := vp.c.Accept(
 				gm.ctx, wb,
 				options.SkipServerEndpointAuthorization{}); err != nil {
 				log.Panic("Ball throw left failed.")
 			}
+			log.Printf("RPC left seems to have worked.")
 		} else {
-			// Nobody on the left!
 			// Send ball back into table - at the moment, don't have the channel.
-			log.Panic("1 Refactor to get ball channel.")
+			log.Panic("1 Nobody on left!  Refactor to get ball channel.")
 		}
 	} else {
 		// Throw ball right.
 		if k <= len(gm.players)-1 {
 			vp := gm.players[k]
+			log.Printf("Attempting RPC to throw ball right to %v : %v\n", vp.p, vp.c)
 			if err := vp.c.Accept(
 				gm.ctx, wb,
 				options.SkipServerEndpointAuthorization{}); err != nil {
 				log.Panic("Ball throw right failed.")
 			}
+			log.Printf("RPC right seems to have worked.")
 		} else {
-			// Nobody on the right!
 			// Send ball back into table - at the moment, don't have the channel.
-			log.Panic("2 Refactor to get ball channel.")
+			log.Panic("2 Nobody on the right!  Refactor to get ball channel.")
 		}
 	}
 }

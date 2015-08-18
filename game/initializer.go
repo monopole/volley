@@ -41,8 +41,9 @@ func MakeServer(ctx *context.T) rpc.Server {
 	if *fileName != "" {
 		saveEndpointToFile(endpoints[0])
 	}
-	for _, ep := range endpoints {
-		log.Printf("Listening at: %v\n", ep)
+	for i, ep := range endpoints {
+		log.Printf("Listening at endpoint %d of %d: %v\n",
+			i+1, len(endpoints), ep)
 	}
 	return s
 }

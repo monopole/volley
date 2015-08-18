@@ -20,7 +20,7 @@ import (
 func gotNetwork() bool {
 	_, err := http.Get(config.TestDomain)
 	if err == nil {
-		log.Printf("Was able to hit %s", config.TestDomain)
+		log.Printf("Network up - able to hit %s", config.TestDomain)
 		return true
 	}
 	log.Printf("Something wrong with network: %v", err)
