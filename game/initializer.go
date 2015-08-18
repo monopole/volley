@@ -2,7 +2,6 @@ package game
 
 import (
 	"flag"
-	"fmt"
 	"io/ioutil"
 	"log"
 
@@ -25,7 +24,7 @@ func saveEndpointToFile(e naming.Endpoint) {
 	if ioutil.WriteFile(*fileName, contents, 0644) != nil {
 		log.Panic("Error writing ", *fileName)
 	}
-	fmt.Printf("Wrote endpoint name to %v.\n", *fileName)
+	log.Printf("Wrote endpoint name to %v.\n", *fileName)
 }
 
 func MakeServer(ctx *context.T) rpc.Server {
@@ -42,6 +41,8 @@ func MakeServer(ctx *context.T) rpc.Server {
 	if *fileName != "" {
 		saveEndpointToFile(endpoints[0])
 	}
-	fmt.Printf("Listening at: %v\n", endpoints[0])
+	for _, ep := range endpoints {
+		log.Printf("Listening at: %v\n", ep)
+	}
 	return s
 }
