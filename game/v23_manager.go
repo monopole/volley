@@ -322,6 +322,7 @@ func (gm *V23Manager) sayHelloToEveryone() {
 		if err := vp.c.Recognize(
 			gm.ctx, wp,
 			options.SkipServerEndpointAuthorization{}); err != nil {
+			// TODO: Instead of panicing, just drop the player from the players list.
 			log.Panic("Recognize failed: ", err)
 		}
 		if gm.chatty {
@@ -430,7 +431,7 @@ func (gm *V23Manager) Run(cbc <-chan model.BallCommand) {
 			ch <- true
 			return
 		case bc := <-gm.chBallCommand:
-			gm.tossBall(bc)
+			gm.throwBall(bc)
 		case p := <-gm.relay.ChRecognize():
 			gm.recognizeOther(p)
 		case p := <-gm.relay.ChForget():
@@ -445,7 +446,7 @@ func serializeBall(b *model.Ball) ifc.Ball {
 		wp, b.GetPos().X, b.GetPos().Y, b.GetVel().X, b.GetVel().Y}
 }
 
-func (gm *V23Manager) tossBall(bc model.BallCommand) {
+func (gm *V23Manager) throwBall(bc model.BallCommand) {
 	if gm.chatty {
 		log.Printf("v23 manager got ball throw command: %v\n", bc)
 	}

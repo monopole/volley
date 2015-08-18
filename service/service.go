@@ -10,6 +10,7 @@ import (
 	"github.com/monopole/croupier/ifc"
 	"github.com/monopole/croupier/model"
 	"log"
+	"sync"
 	"v.io/v23/context"
 	"v.io/v23/rpc"
 )
@@ -18,13 +19,17 @@ type Relay struct {
 	chRecognize    chan *model.Player
 	chForget       chan *model.Player
 	chIncomingBall chan *model.Ball
+	acceptingData  bool
+	mu             sync.RWMutex
 }
 
 func MakeRelay() *Relay {
-	return &Relay{
-		make(chan *model.Player),
-		make(chan *model.Player),
-		make(chan *model.Ball)}
+	r := &Relay{}
+	r.chRecognize = make(chan *model.Player)
+	r.chForget = make(chan *model.Player)
+	r.chIncomingBall = make(chan *model.Ball)
+	r.acceptingData = true
+	return r
 }
 
 // Don't call this until after someone calls v23.shutdown, or incoming
@@ -38,9 +43,15 @@ func MakeRelay() *Relay {
 // data from incoming RPC's would just get dropped on the floor
 // instead of placed on the channel.
 func (x *Relay) Close() {
+	x.mu.Lock()
+	defer x.mu.Unlock()
 	close(x.chRecognize)
 	close(x.chForget)
 	close(x.chIncomingBall)
+	x.acceptingData = false
+	if config.Chatty {
+		log.Printf("Refusing all data.")
+	}
 }
 
 func (x *Relay) ChRecognize() <-chan *model.Player {
@@ -56,43 +67,65 @@ func (x *Relay) ChIncomingBall() <-chan *model.Ball {
 }
 
 func (x *Relay) Recognize(_ *context.T, _ rpc.ServerCall, p ifc.Player) error {
-	log.Printf("RPC received: accepting recognize request from player %v", p)
-	player := model.NewPlayer(int(p.Id))
 	go func() {
-		if config.Chatty {
-			log.Printf("Enchanneling newly recognized player = %v", player)
+		x.mu.Lock()
+		defer x.mu.Unlock()
+		if x.acceptingData {
+			if config.Chatty {
+				log.Printf("RPC received: accepting recognize request from player %v", p)
+			}
+			player := model.NewPlayer(int(p.Id))
+			if config.Chatty {
+				log.Printf("Enchanneling newly recognized player = %v", player)
+			}
+			x.chRecognize <- player
+		} else {
+			log.Printf("Discarding recognize request from player %v", p)
 		}
-		x.chRecognize <- player
 	}()
 	return nil
 }
 
 func (x *Relay) Forget(_ *context.T, _ rpc.ServerCall, p ifc.Player) error {
-	log.Printf("RPC received: accepting forget request from player %v", p)
-	player := model.NewPlayer(int(p.Id))
 	go func() {
-		if config.Chatty {
-			log.Printf("Enchanneling player to forget = %v", player)
+		x.mu.Lock()
+		defer x.mu.Unlock()
+		if x.acceptingData {
+			if config.Chatty {
+				log.Printf("RPC received: accepting forget request from player %v", p)
+			}
+			player := model.NewPlayer(int(p.Id))
+			if config.Chatty {
+				log.Printf("Enchanneling player to forget = %v", player)
+			}
+			x.chForget <- player
+		} else {
+			log.Printf("Discarding forget request from player %v", p)
 		}
-		x.chForget <- player
 	}()
 	return nil
 }
 
 func (x *Relay) Accept(_ *context.T, _ rpc.ServerCall, b ifc.Ball) error {
-	if config.Chatty {
-		log.Printf("RPC received: accepting ball %v", b)
-	}
-	player := model.NewPlayer(int(b.Owner.Id))
-	ball := model.NewBall(
-		player,
-		model.Vec{b.X, b.Y},
-		model.Vec{b.Dx, b.Dy})
 	go func() {
-		if config.Chatty {
-			log.Printf("Enchanneling ball = %v", ball)
+		x.mu.Lock()
+		defer x.mu.Unlock()
+		if x.acceptingData {
+			if config.Chatty {
+				log.Printf("RPC received: accepting ball %v", b)
+			}
+			player := model.NewPlayer(int(b.Owner.Id))
+			ball := model.NewBall(
+				player,
+				model.Vec{b.X, b.Y},
+				model.Vec{b.Dx, b.Dy})
+			if config.Chatty {
+				log.Printf("Enchanneling ball = %v", ball)
+			}
+			x.chIncomingBall <- ball
+		} else {
+			log.Printf("Discarding ball.")
 		}
-		x.chIncomingBall <- ball
 	}()
 	return nil
 }
