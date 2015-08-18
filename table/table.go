@@ -21,8 +21,8 @@ type Table struct {
 	scn                 *screen.Screen
 	screenOn            bool
 	isGravity           bool
-	isLeftDoorOpen      bool
-	isRightDoorOpen     bool
+	leftDoor            model.DoorState
+	rightDoor           model.DoorState
 	chBallEnter         <-chan *model.Ball       // Not owned, read from.
 	chDoorCommand       <-chan model.DoorCommand // Not owned, read from.
 	chV23               chan<- chan bool         // Not owned, written to.
@@ -46,10 +46,10 @@ func NewTable(
 		chatty,
 		defaultMaxDistSqForImpulse,
 		me, scn,
-		false, // screenOn
-		false, // isGravity
-		false, //	isLeftDoorOpen
-		false, //	isRightDoorOpen
+		false,        // screenOn
+		false,        // isGravity
+		model.Closed, // left door
+		model.Closed, // right door
 		chBallEnter,
 		chDoorCommand,
 		chV23,
@@ -97,6 +97,7 @@ func (table *Table) Run() {
 			ch <- true
 			return
 		case b := <-table.chBallEnter:
+			b.SetPos(b.GetPos().X, b.GetPos().Y*table.scn.Height())
 			table.balls = append(table.balls, b)
 		case dc := <-table.chDoorCommand:
 			table.handleDoor(dc)
@@ -154,15 +155,15 @@ func (table *Table) handleDoor(dc model.DoorCommand) {
 	}
 	if dc.S == model.Open {
 		if dc.D == model.Left {
-			table.isLeftDoorOpen = true
+			table.leftDoor = model.Open
 		} else {
-			table.isRightDoorOpen = true
+			table.rightDoor = model.Open
 		}
 	} else {
 		if dc.D == model.Left {
-			table.isLeftDoorOpen = false
+			table.leftDoor = model.Closed
 		} else {
-			table.isRightDoorOpen = false
+			table.rightDoor = model.Closed
 		}
 	}
 }
@@ -249,7 +250,7 @@ func (table *Table) moveBalls() {
 		ny := b.GetPos().Y + timeStep*dy
 		if nx <= 0 {
 			// Ball hit left side of screen.
-			if table.isLeftDoorOpen {
+			if table.leftDoor == model.Open {
 				throwLeft = append(throwLeft, i)
 				nx = table.scn.Width()
 			} else {
@@ -258,7 +259,7 @@ func (table *Table) moveBalls() {
 			}
 		} else if nx >= table.scn.Width() {
 			// Ball hit right side of screen.
-			if table.isRightDoorOpen {
+			if table.rightDoor == model.Open {
 				throwRight = append(throwRight, i)
 				nx = 0
 			} else {
@@ -282,7 +283,7 @@ func (table *Table) moveBalls() {
 }
 
 func (table *Table) discardBalls() {
-	if !table.isLeftDoorOpen && !table.isRightDoorOpen {
+	if table.leftDoor == model.Closed && table.rightDoor == model.Closed {
 		// Nowhere to discard balls.
 		return
 	}
@@ -291,21 +292,21 @@ func (table *Table) discardBalls() {
 	for i, b := range table.balls {
 		nx := b.GetPos().X
 		if b.GetVel().X <= 0 {
-			if table.isLeftDoorOpen {
+			if table.leftDoor == model.Open {
 				throwLeft = append(throwLeft, i)
 				nx = table.scn.Width()
 			} else {
-				if table.isRightDoorOpen {
+				if table.rightDoor == model.Open {
 					throwRight = append(throwRight, i)
 					nx = 0
 				}
 			}
 		} else {
-			if table.isRightDoorOpen {
+			if table.rightDoor == model.Open {
 				throwRight = append(throwRight, i)
 				nx = 0
 			} else {
-				if table.isLeftDoorOpen {
+				if table.leftDoor == model.Open {
 					throwLeft = append(throwLeft, i)
 					nx = table.scn.Width()
 				}
@@ -326,7 +327,7 @@ func (table *Table) throwBalls(throwLeft, throwRight []int) {
 		count++
 		b := table.balls[i]
 		table.balls = append(table.balls[:i], table.balls[i+1:]...)
-		table.chBallCommand <- model.BallCommand{b, model.Left}
+		table.throwOneBall(b, model.Left)
 	}
 	for _, k := range throwRight {
 		i := k - count
@@ -336,8 +337,17 @@ func (table *Table) throwBalls(throwLeft, throwRight []int) {
 		count++
 		b := table.balls[i]
 		table.balls = append(table.balls[:i], table.balls[i+1:]...)
-		table.chBallCommand <- model.BallCommand{b, model.Right}
+		table.throwOneBall(b, model.Right)
 	}
+}
+
+func (table *Table) throwOneBall(b *model.Ball, direction model.Direction) {
+	// Before throwing, normalize the Y coordinate to dimensionless
+	// percentage.  It will be converted on the other side, so that if
+	// the ball left one tenth of the way up the screen, it will enter
+	// at the same proportionate height.
+	b.SetPos(b.GetPos().X, b.GetPos().Y/table.scn.Height())
+	table.chBallCommand <- model.BallCommand{b, direction}
 }
 
 func (table *Table) quit() {

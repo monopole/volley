@@ -20,7 +20,7 @@ type Vec struct {
 }
 
 func (v *Vec) String() string {
-	return fmt.Sprintf("{%v, %v}", v.X, v.Y)
+	return fmt.Sprintf("{%f.1, %f.1}", v.X, v.Y)
 }
 
 type Player struct {

@@ -38,8 +38,8 @@ type V23Manager struct {
 	ctx                  *context.T
 	shutdown             v23.Shutdown
 	isRunning            bool
-	isLeftDoorOpen       bool
-	isRightDoorOpen      bool
+	leftDoor             model.DoorState
+	rightDoor            model.DoorState
 	rootName             string
 	namespaceRoot        string
 	relay                *service.Relay
@@ -55,11 +55,11 @@ func NewV23Manager(
 	chatty bool, rootName string, namespaceRoot string) *V23Manager {
 	return &V23Manager{
 		chatty,
-		nil,   // ctx
-		nil,   // shutdown
-		false, // isRunning
-		false, // isLeftDoorOpen
-		false, // isRightDoorOpen
+		nil,          // ctx
+		nil,          // shutdown
+		false,        // isRunning
+		model.Closed, // left door
+		model.Closed, // right door
 		rootName,
 		namespaceRoot,
 		nil, // relay
@@ -239,13 +239,13 @@ func (gm *V23Manager) playersString() (s string) {
 	for i := 0; i < k; i++ {
 		s += gm.players[i].p.String() + " "
 	}
-	if gm.isLeftDoorOpen {
+	if gm.leftDoor == model.Open {
 		s += "_"
 	} else {
 		s += "["
 	}
 	s += gm.myself.String()
-	if gm.isRightDoorOpen {
+	if gm.rightDoor == model.Open {
 		s += "_"
 	} else {
 		s += "]"
@@ -260,39 +260,39 @@ func (gm *V23Manager) playersString() (s string) {
 func (gm *V23Manager) assureDoor(dc model.DoorCommand) {
 	if dc.S == model.Open {
 		if dc.D == model.Left {
-			if gm.isLeftDoorOpen {
+			if gm.leftDoor == model.Open {
 				if gm.chatty {
 					log.Printf("Left door already open.\n")
 				}
 				return
 			}
-			gm.isLeftDoorOpen = true
+			gm.leftDoor = model.Open
 		} else {
-			if gm.isRightDoorOpen {
+			if gm.rightDoor == model.Open {
 				if gm.chatty {
 					log.Printf("Right door already open.\n")
 				}
 				return
 			}
-			gm.isRightDoorOpen = true
+			gm.rightDoor = model.Open
 		}
 	} else {
 		if dc.D == model.Left {
-			if !gm.isLeftDoorOpen {
+			if gm.leftDoor == model.Closed {
 				if gm.chatty {
 					log.Printf("Left door already closed.\n")
 				}
 				return
 			}
-			gm.isLeftDoorOpen = false
+			gm.leftDoor = model.Closed
 		} else {
-			if !gm.isRightDoorOpen {
+			if gm.rightDoor == model.Closed {
 				if gm.chatty {
 					log.Printf("Right door already closed.\n")
 				}
 				return
 			}
-			gm.isRightDoorOpen = false
+			gm.rightDoor = model.Closed
 		}
 	}
 	if gm.chDoorCommand == nil {
