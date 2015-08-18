@@ -315,7 +315,7 @@ func (gm *V23Manager) sayHelloToEveryone() {
 	wp := ifc.Player{int32(gm.Me().Id())}
 	for _, vp := range gm.players {
 		if gm.chatty {
-			log.Printf("Asking %v to recognize me=%v", vp, gm.Me())
+			log.Printf("RPC sending: asking %v to recognize me=%v", vp, gm.Me())
 			log.Printf("  gm.ctx %T = %v", gm.ctx, gm.ctx)
 			log.Printf("  wp %T = %v", wp, wp)
 		}
@@ -325,7 +325,7 @@ func (gm *V23Manager) sayHelloToEveryone() {
 			log.Panic("Recognize failed: ", err)
 		}
 		if gm.chatty {
-			log.Printf("Recognize call completed!")
+			log.Printf("RPC Recognize call completed!")
 		}
 	}
 	if gm.chatty {
@@ -340,7 +340,9 @@ func (gm *V23Manager) sayGoodbyeToEveryone() {
 	wp := ifc.Player{int32(gm.Me().Id())}
 	for _, vp := range gm.players {
 		if gm.chatty {
-			log.Printf("Asking %v to forget me=%v\n", vp.p, gm.Me())
+			log.Printf("RPC sending: asking %v to forget me=%v", vp.p, gm.Me())
+			log.Printf("  gm.ctx %T = %v", gm.ctx, gm.ctx)
+			log.Printf("  wp %T = %v", wp, wp)
 		}
 		if err := vp.c.Forget(
 			gm.ctx, wp, options.SkipServerEndpointAuthorization{}); err != nil {
