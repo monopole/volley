@@ -56,7 +56,7 @@ func (x *Relay) ChIncomingBall() <-chan *model.Ball {
 }
 
 func (x *Relay) Recognize(_ *context.T, _ rpc.ServerCall, p ifc.Player) error {
-	log.Printf("Accepting recognize request from player %v", p)
+	log.Printf("RPC received: accepting recognize request from player %v", p)
 	player := model.NewPlayer(int(p.Id))
 	go func() {
 		if config.Chatty {
@@ -68,7 +68,7 @@ func (x *Relay) Recognize(_ *context.T, _ rpc.ServerCall, p ifc.Player) error {
 }
 
 func (x *Relay) Forget(_ *context.T, _ rpc.ServerCall, p ifc.Player) error {
-	log.Printf("Accepting forget request from player %v", p)
+	log.Printf("RPC received: accepting forget request from player %v", p)
 	player := model.NewPlayer(int(p.Id))
 	go func() {
 		if config.Chatty {
@@ -81,7 +81,7 @@ func (x *Relay) Forget(_ *context.T, _ rpc.ServerCall, p ifc.Player) error {
 
 func (x *Relay) Accept(_ *context.T, _ rpc.ServerCall, b ifc.Ball) error {
 	if config.Chatty {
-		log.Printf("Accepting a ball!")
+		log.Printf("RPC received: accepting ball %v", b)
 	}
 	player := model.NewPlayer(int(b.Owner.Id))
 	ball := model.NewBall(
@@ -90,7 +90,7 @@ func (x *Relay) Accept(_ *context.T, _ rpc.ServerCall, b ifc.Ball) error {
 		model.Vec{b.Dx, b.Dy})
 	go func() {
 		if config.Chatty {
-			log.Printf("Enchanneling ball = %v", b)
+			log.Printf("Enchanneling ball = %v", ball)
 		}
 		x.chIncomingBall <- ball
 	}()

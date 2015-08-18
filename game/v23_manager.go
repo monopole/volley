@@ -449,13 +449,13 @@ func (gm *V23Manager) tossBall(bc model.BallCommand) {
 	}
 	k := gm.findInsertion(gm.myself)
 	wb := serializeBall(bc.B)
-	log.Printf("Ball = %v", wb)
+	log.Printf("About to throw ball = %v", wb)
 	if bc.D == model.Left {
 		// Throw ball left.
 		k--
 		if k >= 0 {
 			vp := gm.players[k]
-			log.Printf("Attempting RPC to throw ball left to %v : %v\n", vp.p, vp.c)
+			log.Printf("RPC sending: throwing ball left to %v : %v\n", vp.p, vp.c)
 			if err := vp.c.Accept(
 				gm.ctx, wb,
 				options.SkipServerEndpointAuthorization{}); err != nil {
@@ -470,7 +470,7 @@ func (gm *V23Manager) tossBall(bc model.BallCommand) {
 		// Throw ball right.
 		if k <= len(gm.players)-1 {
 			vp := gm.players[k]
-			log.Printf("Attempting RPC to throw ball right to %v : %v\n", vp.p, vp.c)
+			log.Printf("RPC sending: throwing ball right to %v : %v\n", vp.p, vp.c)
 			if err := vp.c.Accept(
 				gm.ctx, wb,
 				options.SkipServerEndpointAuthorization{}); err != nil {
