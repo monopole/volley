@@ -116,6 +116,25 @@ GOPATH=$VEGGIE go install v.io/x/ref/services/agent/...
 GOPATH=$VEGGIE go install v.io/x/ref/services/mounttable/...
 ```
 
+## Fix crypto libs
+
+See https://vanadium.googlesource.com/third_party/+log/master/go/src/golang.org/x/crypto
+
+Edit these two files, adding a bogux hardware (e.g. `,jeep`) target to
+the `+build` line:
+
+```
+$VEGGIE/src/golang.org/x/crypto/poly1305/poly1305_arm.s
+$VEGGIE/src/golang.org/x/crypto/poly1305/sum_arm.go
+```
+
+Edit this file, *removing* `,!arm` from the `+build` line:
+
+```
+$VEGGIE/src/golang.org/x/crypto/poly1305/sum_ref.go
+```
+
+
 ## Install supplemental GL libs for ubuntu
 
 See notes [here](https://github.com/golang/mobile/blob/master/app/x11.go#L15).
