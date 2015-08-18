@@ -97,7 +97,19 @@ func (table *Table) Run() {
 			ch <- true
 			return
 		case b := <-table.chBallEnter:
-			b.SetPos(b.GetPos().X, b.GetPos().Y*table.scn.Height())
+			nx := b.GetPos().X
+			if nx > 0.1 {
+				// Ball came in from right.
+				nx = table.scn.Width()
+			} else {
+				// Ball came in from left..
+				nx = 0
+			}
+			// Assume the Y component was normalized before the throw.
+			ny := b.GetPos().Y * table.scn.Height()
+			// Leave the velocity alone for now, although that
+			// looks odd when jumping from a small screen to a large screen.
+			b.SetPos(nx, ny)
 			if table.chatty {
 				log.Printf("Table accepting ball %v", b)
 			}
@@ -254,8 +266,8 @@ func (table *Table) moveBalls() {
 		if nx <= 0 {
 			// Ball hit left side of screen.
 			if table.leftDoor == model.Open {
+				nx = 1
 				throwLeft = append(throwLeft, i)
-				nx = table.scn.Width()
 			} else {
 				nx = 0
 				dx = -dx
@@ -263,8 +275,8 @@ func (table *Table) moveBalls() {
 		} else if nx >= table.scn.Width() {
 			// Ball hit right side of screen.
 			if table.rightDoor == model.Open {
-				throwRight = append(throwRight, i)
 				nx = 0
+				throwRight = append(throwRight, i)
 			} else {
 				nx = table.scn.Width()
 				dx = -dx
