@@ -98,6 +98,9 @@ func (table *Table) Run() {
 			return
 		case b := <-table.chBallEnter:
 			b.SetPos(b.GetPos().X, b.GetPos().Y*table.scn.Height())
+			if table.chatty {
+				log.Printf("Table accepting ball %v", b)
+			}
 			table.balls = append(table.balls, b)
 		case dc := <-table.chDoorCommand:
 			table.handleDoor(dc)

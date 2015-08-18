@@ -104,8 +104,8 @@ func NewBall(
 
 func (b *Ball) String() string {
 	return fmt.Sprintf(
-		"(%s p%s v%s)",
-		b.owner, b.p, b.v)
+		"(%v p%s v%s)",
+		b.owner.String(), b.p.String(), b.v.String())
 }
 
 func (b *Ball) Owner() *Player {

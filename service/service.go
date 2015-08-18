@@ -76,7 +76,7 @@ func (x *Relay) Recognize(_ *context.T, _ rpc.ServerCall, p ifc.Player) error {
 			}
 			player := model.NewPlayer(int(p.Id))
 			if config.Chatty {
-				log.Printf("Enchanneling newly recognized player = %v", player)
+				log.Printf("Telling v23man to recognize = %v", player)
 			}
 			x.chRecognize <- player
 		} else {
@@ -96,7 +96,7 @@ func (x *Relay) Forget(_ *context.T, _ rpc.ServerCall, p ifc.Player) error {
 			}
 			player := model.NewPlayer(int(p.Id))
 			if config.Chatty {
-				log.Printf("Enchanneling player to forget = %v", player)
+				log.Printf("Telling v23man to forget = %v", player)
 			}
 			x.chForget <- player
 		} else {
@@ -120,7 +120,7 @@ func (x *Relay) Accept(_ *context.T, _ rpc.ServerCall, b ifc.Ball) error {
 				model.Vec{b.X, b.Y},
 				model.Vec{b.Dx, b.Dy})
 			if config.Chatty {
-				log.Printf("Enchanneling ball = %v", ball)
+				log.Printf("Telling table to accept ball %v", ball)
 			}
 			x.chIncomingBall <- ball
 		} else {
