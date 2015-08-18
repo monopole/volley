@@ -98,12 +98,12 @@ func (table *Table) Run() {
 			return
 		case b := <-table.chBallEnter:
 			nx := b.GetPos().X
-			if nx > 0.1 {
-				// Ball came in from right.
-				nx = table.scn.Width()
-			} else {
-				// Ball came in from left..
+			if nx <= 0.1 {
+				// Fuzzy zero means ball came in from left.
 				nx = 0
+			} else {
+				// Ball came in from right..
+				nx = table.scn.Width()
 			}
 			// Assume the Y component was normalized before the throw.
 			ny := b.GetPos().Y * table.scn.Height()
@@ -189,7 +189,7 @@ func (table *Table) applyImpulse(impulse *model.Ball) {
 	// apply new velocity to the ball.
 	// For now, just pick the zero ball.
 	if table.chatty {
-		log.Printf("Got impulse: %v", impulse)
+		log.Printf("Got impulse: %s", impulse.String())
 	}
 	closest, ball := table.closestDsq(impulse.GetPos())
 	if ball == nil {

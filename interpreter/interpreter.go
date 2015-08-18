@@ -111,6 +111,9 @@ func (ub *Interpreter) Run(a app.App) {
 						b := model.NewBall(nil,
 							model.Vec{ub.beginX, ub.beginY},
 							model.Vec{float32(dx / mag), float32(dy / mag)})
+						if ub.chatty {
+							log.Printf("Sending impulse: %s", b.String())
+						}
 						ub.chImpulse <- b
 					}
 				}

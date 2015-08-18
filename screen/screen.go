@@ -101,10 +101,9 @@ func (s *Screen) Stop() {
 
 var triangleData = f32.Bytes(binary.LittleEndian,
 	// x, y, z, in percentage distance from origin to window border
-	-0.4, 0.2, 0.0,
-	0.4, 0.2, 0.0,
-	0.4, -0.2, 0.0,
-	-0.4, -0.2, 0.0,
+	-0.1, 0.2, 0.0,
+	0.1, 0.2, 0.0,
+	0.1, -0.2, 0.0,
 )
 
 const (

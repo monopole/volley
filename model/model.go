@@ -20,7 +20,7 @@ type Vec struct {
 }
 
 func (v *Vec) String() string {
-	return fmt.Sprintf("{%.1f, %.1%f}", v.X, v.Y)
+	return fmt.Sprintf("{%.2f, %.2f}", v.X, v.Y)
 }
 
 type Player struct {
@@ -103,9 +103,12 @@ func NewBall(
 }
 
 func (b *Ball) String() string {
+	owner := "zod"
+	if b.owner != nil {
+		owner = b.owner.String()
+	}
 	return fmt.Sprintf(
-		"(%s p%s v%s)",
-		b.owner.String(), b.p.String(), b.v.String())
+		"(%s p%s v%s)", owner, b.p.String(), b.v.String())
 }
 
 func (b *Ball) Owner() *Player {
