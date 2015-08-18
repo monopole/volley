@@ -88,17 +88,17 @@ go version
 ## Define workspace
 
 The remaining commands destructively write to the directory
-pointed to by `VEGGIE`.
+pointed to by `BERRY`.
 
 ```
-export VEGGIE=~/pumpkin
-PATH=$VEGGIE/bin:$PATH
+export BERRY=~/pumpkin
+PATH=$BERRY/bin:$PATH
 ```
 
 Optionally wipe it
 ```
-/bin/rm -rf $VEGGIE
-mkdir $VEGGIE
+/bin/rm -rf $BERRY
+mkdir $BERRY
 ```
 
 
@@ -110,28 +110,28 @@ __Because of code mirror server failures, one may have to repeat these
 incantations a few times.__
 
 ```
-GOPATH=$VEGGIE go get -d v.io/x/ref/...
-GOPATH=$VEGGIE go install v.io/x/ref/cmd/...
-GOPATH=$VEGGIE go install v.io/x/ref/services/agent/...
-GOPATH=$VEGGIE go install v.io/x/ref/services/mounttable/...
+GOPATH=$BERRY go get -d v.io/x/ref/...
+GOPATH=$BERRY go install v.io/x/ref/cmd/...
+GOPATH=$BERRY go install v.io/x/ref/services/agent/...
+GOPATH=$BERRY go install v.io/x/ref/services/mounttable/...
 ```
 
 ## Fix crypto libs
 
 See https://vanadium.googlesource.com/third_party/+log/master/go/src/golang.org/x/crypto
 
-Edit these two files, adding a bogux hardware (e.g. `,jeep`) target to
+Edit these two files, _adding_ a bogus hardware (e.g. `,jeep`) target to
 the `+build` line:
 
 ```
-$VEGGIE/src/golang.org/x/crypto/poly1305/poly1305_arm.s
-$VEGGIE/src/golang.org/x/crypto/poly1305/sum_arm.go
+$BERRY/src/golang.org/x/crypto/poly1305/poly1305_arm.s
+$BERRY/src/golang.org/x/crypto/poly1305/sum_arm.go
 ```
 
 Edit this file, *removing* `,!arm` from the `+build` line:
 
 ```
-$VEGGIE/src/golang.org/x/crypto/poly1305/sum_ref.go
+$BERRY/src/golang.org/x/crypto/poly1305/sum_ref.go
 ```
 
 
@@ -145,13 +145,13 @@ sudo apt-get install libegl1-mesa-dev libgles2-mesa-dev libx11-dev
 ## Install Go mobile stuff
 
 ```
-GOPATH=$VEGGIE go get golang.org/x/mobile/cmd/gomobile
-GOPATH=$VEGGIE gomobile init
+GOPATH=$BERRY go get golang.org/x/mobile/cmd/gomobile
+GOPATH=$BERRY gomobile init
 ```
 
 ## Install game software
 
-Create and fill `$VEGGIE/src/github.com/monopole/croupier`.
+Create and fill `$BERRY/src/github.com/monopole/croupier`.
 
 Ignore complaints about _No buildable Go source_.
 
@@ -161,16 +161,16 @@ GITDIR=github.com/monopole/croupier
 
 Grab the code:
 ```
-GOPATH=$VEGGIE go get -d $GITDIR
+GOPATH=$BERRY go get -d $GITDIR
 ```
 
 Generate the Go that was missing and build the v23 fortune server
 and client stuff.
 
 ```
-VDLROOT=$VEGGIE/src/v.io/v23/vdlroot \
-    VDLPATH=$VEGGIE/src \
-    $VEGGIE/bin/vdl generate --lang go $VEGGIE/src/$GITDIR/ifc
+VDLROOT=$BERRY/src/v.io/v23/vdlroot \
+    VDLPATH=$BERRY/src \
+    $BERRY/bin/vdl generate --lang go $BERRY/src/$GITDIR/ifc
 ```
 
 ## Test desktop mode
@@ -180,7 +180,7 @@ This app is a small modification of the
 [gomobile basic example](https://godoc.org/golang.org/x/mobile/example/basic).
 
 ```
-GOPATH=$VEGGIE go install $GITDIR/volley
+GOPATH=$BERRY go install $GITDIR/volley
 ```
 
 Check the namespace:
@@ -229,7 +229,7 @@ Plug your dev phone into a USB port.
 Enter this:
 
 ```
-GOPATH=$VEGGIE gomobile install $GITDIR/volley
+GOPATH=$BERRY gomobile install $GITDIR/volley
 ```
 
 You should see a triangle (or not) depending on the order in which you launched it with
