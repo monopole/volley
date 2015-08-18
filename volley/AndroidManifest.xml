@@ -6,7 +6,7 @@ license that can be found in the LICENSE file.
 -->
 <manifest
 	xmlns:android="http://schemas.android.com/apk/res/android"
-	package="io.v.go.examples.volley"
+	package="io.v.go.examples.aaavolley"
 	android:versionCode="1"
 	android:versionName="1.0">
 
@@ -19,10 +19,10 @@ license that can be found in the LICENSE file.
   <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
   <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     
-	<application android:label="AAAvolley" android:debuggable="true">
+	<application android:label="aaavolley" android:debuggable="true">
 
 	<activity android:name="org.golang.app.GoNativeActivity"
-		android:label="volley"
+		android:label="aaavolley"
 		android:configChanges="orientation|keyboardHidden">
 		<meta-data android:name="android.app.lib_name" android:value="network" />
 		<intent-filter>

@@ -461,7 +461,7 @@ func (gm *V23Manager) tossBall(bc model.BallCommand) {
 			if err := vp.c.Accept(
 				gm.ctx, wb,
 				options.SkipServerEndpointAuthorization{}); err != nil {
-				log.Panic("Ball throw left failed.")
+				log.Panic("Ball throw left failed; err=", err)
 			}
 			log.Printf("RPC left seems to have worked.")
 		} else {
@@ -476,7 +476,7 @@ func (gm *V23Manager) tossBall(bc model.BallCommand) {
 			if err := vp.c.Accept(
 				gm.ctx, wb,
 				options.SkipServerEndpointAuthorization{}); err != nil {
-				log.Panic("Ball throw right failed.")
+				log.Panic("Ball throw right failed; err=", err)
 			}
 			log.Printf("RPC right seems to have worked.")
 		} else {
