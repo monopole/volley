@@ -452,7 +452,7 @@ func (gm *V23Manager) throwBall(bc model.BallCommand) {
 	}
 	k := gm.findInsertion(gm.myself)
 	wb := serializeBall(bc.B)
-	log.Printf("About to throw ball = %v", wb)
+	log.Printf("About to throw serialized ball = %v", wb)
 	if bc.D == model.Left {
 		// Throw ball left.
 		k--
@@ -492,13 +492,13 @@ func (gm *V23Manager) quit() {
 	if gm.chatty {
 		log.Println("Shutting down v23 runtime.")
 	}
-	gm.shutdown()
-	if gm.chatty {
-		log.Println("v23 runttime done.")
-	}
 	gm.relay.Close()
 	if gm.chatty {
 		log.Println("Relay closed.")
+	}
+	gm.shutdown()
+	if gm.chatty {
+		log.Println("v23 runtime done.")
 	}
 	close(gm.chDoorCommand)
 }

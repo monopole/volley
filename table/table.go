@@ -111,7 +111,7 @@ func (table *Table) Run() {
 			// looks odd when jumping from a small screen to a large screen.
 			b.SetPos(nx, ny)
 			if table.chatty {
-				log.Printf("Table accepting ball %v", b)
+				log.Printf("Table accepting ball %s", b)
 			}
 			table.balls = append(table.balls, b)
 		case dc := <-table.chDoorCommand:
