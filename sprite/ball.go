@@ -1,15 +1,16 @@
-package screen
+package sprite
 
 import (
 	"encoding/binary"
 	"golang.org/x/mobile/exp/f32"
+	"golang.org/x/mobile/gl"
 )
 
 const (
-	coordsPerVertex = 3
-	vertexCount     = 4
+	CoordsPerVertex = 3
+	VertexCount     = 4
 
-	vertexShader = `#version 100
+	VertexShader = `#version 100
 uniform vec2 offset;
 attribute vec4 position;
 void main() {
@@ -19,7 +20,7 @@ void main() {
 	gl_Position = position + offset4;
 }`
 
-	fragmentShader = `#version 100
+	FragmentShader = `#version 100
 precision mediump float;
 uniform vec4 color;
 void main() {
@@ -34,3 +35,23 @@ var triangleData = f32.Bytes(binary.LittleEndian,
 	0.1, 0.2, 0.0,
 	0.1, -0.2, 0.0,
 )
+
+type Ball struct {
+	buf gl.Buffer
+}
+
+func NewBall() *Ball {
+	b := &Ball{}
+	b.buf = gl.CreateBuffer()
+	gl.BindBuffer(gl.ARRAY_BUFFER, b.buf)
+	gl.BufferData(gl.ARRAY_BUFFER, triangleData, gl.STATIC_DRAW)
+	return b
+}
+
+func (b *Ball) Buffer() gl.Buffer {
+	return b.buf
+}
+
+func (b *Ball) DeleteBuffer() {
+	gl.DeleteBuffer(b.buf)
+}

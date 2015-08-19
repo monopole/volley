@@ -3,6 +3,7 @@ package interpreter
 import (
 	"github.com/monopole/croupier/model"
 	"golang.org/x/mobile/app"
+	"golang.org/x/mobile/event/key"
 	"golang.org/x/mobile/event/lifecycle"
 	"golang.org/x/mobile/event/paint"
 	"golang.org/x/mobile/event/size"
@@ -79,6 +80,18 @@ func (ub *Interpreter) Run(a app.App) {
 			// TODO(jregan): might have to wait for a response
 			// before calling back to the app.
 			a.EndPaint(e)
+		case key.Event: // Aspirationally use keys
+			if ub.chatty {
+				log.Printf("Key event! %T = %v", e.Code, e.Code)
+			}
+			switch e.Code {
+			case key.CodeQ:
+				ub.quit()
+				return
+			case key.CodeEscape:
+				ub.quit()
+				return
+			}
 		case touch.Event:
 			switch e.Type {
 			case touch.TypeBegin:
