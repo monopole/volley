@@ -39,6 +39,18 @@ void main() {
 }`
 )
 
+type Color struct {
+	R, G, B float32
+}
+
+var playerColors = []Color{
+	Color{255, 255, 255}, // white
+	Color{0, 87, 231},    // google blue
+	Color{214, 45, 32},   // google red
+	Color{255, 167, 0},   // google orange
+	Color{0, 135, 68},    // google green
+}
+
 type Screen struct {
 	buf      gl.Buffer
 	program  gl.Program
@@ -77,6 +89,11 @@ func NewScreen() *Screen {
 }
 
 func (s *Screen) Start() {
+
+	for i, c := range playerColors {
+		playerColors[i] = Color{c.R / 255.0, c.G / 255.0, c.B / 255.0}
+	}
+
 	s.buf = gl.CreateBuffer()
 	gl.BindBuffer(gl.ARRAY_BUFFER, s.buf)
 	triangleData = makeTriangleData()
@@ -123,8 +140,8 @@ func (s *Screen) Paint(balls []*model.Ball) {
 	gl.VertexAttribPointer(s.position, coordsPerVertex, gl.FLOAT, false, 0, 0)
 
 	for _, b := range balls {
-		// Set the ball's color
-		// 	gl.Uniform4f(s.color, 0, 1.0, 1.0, opaque)
+		c := playerColors[b.Owner().Id()%len(playerColors)]
+		gl.Uniform4f(s.color, c.R, c.G, c.B, opaque)
 		gl.Uniform2f(s.offset, b.GetPos().X/s.width, b.GetPos().Y/s.height)
 		gl.DrawArrays(gl.TRIANGLES, 0, vertexCount)
 	}
