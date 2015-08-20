@@ -105,7 +105,7 @@ func (table *Table) Run() {
 				// Ball came in from right..
 				nx = table.scn.Width()
 			}
-			// Assume the Y component was normalized before the throw.
+			// Assume Y component normalized before the throw.
 			ny := b.GetPos().Y * table.scn.Height()
 			// Leave the velocity alone for now, although that
 			// looks odd when jumping from a small screen to a large screen.

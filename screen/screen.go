@@ -10,10 +10,10 @@ import (
 )
 
 const (
-	opaque = 1.0
-	red    = 0.1
-	green  = 0.1
-	blue   = 0.1
+	opaque  = 1.0
+	bgRed   = 0.1
+	bgGreen = 0.1
+	bgBlue  = 0.1
 )
 
 type Screen struct {
@@ -28,9 +28,8 @@ func NewScreen() *Screen {
 }
 
 func (s *Screen) Start() {
-
-	s.zball = []*sprite.Ball{sprite.NewBall()}
-	//	s.zball = []*sprite.Ball{sprite.NewBall(), sprite.NewBall()}
+	//	s.zball = []*sprite.Ball{sprite.NewBall()}
+	s.zball = []*sprite.Ball{sprite.NewBall(), sprite.NewBall()}
 }
 
 func (s *Screen) ReSize(width float32, height float32) {
@@ -47,7 +46,7 @@ func (s *Screen) Height() float32 {
 }
 
 func (s *Screen) Paint(balls []*model.Ball) {
-	gl.ClearColor(red, green, blue, opaque)
+	gl.ClearColor(bgRed, bgGreen, bgBlue, opaque)
 	gl.Clear(gl.COLOR_BUFFER_BIT)
 
 	s.gray += 0.01
@@ -57,11 +56,12 @@ func (s *Screen) Paint(balls []*model.Ball) {
 
 	if len(balls) > 0 {
 		b := balls[0]
+
 		x := b.GetPos().X / s.width
 		y := b.GetPos().Y / s.height
 		// Experimenting with multiple balls not working.
 		s.zball[0].Draw(s.gray, x, y)
-		//		s.zball[1].Draw(s.gray, x+100, y+10)
+		//		s.zball[1].Draw(s.gray, x-0.1, y-0.1)
 	}
 
 	// debug.DrawFPS(c)
