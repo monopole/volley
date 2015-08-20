@@ -1,0 +1,33 @@
+Coordinates of touch events, ball locations,
+impulses, etc. are in screen coords
+
+  ( 0, 0) ...  ( W, 0)
+  ...             ...
+  ( 0, H) ...  ( W, H)
+
+where W and H are the pixel width and height
+of the window.
+
+The {x,y} passed to Draw below is assumed to
+be a non-negative normalized screen coordinate, with
+width and height divided out:
+
+  ( 0, 0) ...  ( 1, 0)
+  ...             ...
+  ( 0, 1) ...  ( 1, 1)
+
+This must be converted to OpenGL coords:
+
+  (-1, 1) ...  ( 1, 1)
+  ...    (0, 0)    ...
+  (-1,-1) ...  ( 1,-1)
+
+This is both a doubling and a sign flip
+for the Y axis.  The transform is:
+
+  X =  2 * ( oldX - 0.5 ) = 2 oldX - 1
+  Y = -2 * ( oldY - 0.5 ) = 1 - 2 oldY
+
+and is performed by the shader below.  It could
+be done in Go on the CPU, but might as well let
+the GPU contribute.

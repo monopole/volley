@@ -102,7 +102,7 @@ func (table *Table) Run() {
 				// Fuzzy zero means ball came in from left.
 				nx = 0
 			} else {
-				// Ball came in from right..
+				// Ball came in from right.
 				nx = table.scn.Width()
 			}
 			// Assume Y component normalized before the throw.
@@ -117,9 +117,9 @@ func (table *Table) Run() {
 		case dc := <-table.chDoorCommand:
 			table.handleDoor(dc)
 		case rs := <-table.chResize:
-			if table.scn.Width() < 1 && table.me.Id() == 1 {
-				// Special case: my screen has not resized/rendered yet, and
-				// i'm the first player.
+			if table.scn.Width() < 1 {
+				// Special case: my screen has not resized/rendered yet.
+				// && table.me.Id() == 1 {
 				table.firstBall(rs)
 			}
 			table.scn.ReSize(rs.X, rs.Y)
@@ -357,10 +357,10 @@ func (table *Table) throwBalls(throwLeft, throwRight []int) {
 }
 
 func (table *Table) throwOneBall(b *model.Ball, direction model.Direction) {
-	// Before throwing, normalize the Y coordinate to dimensionless
-	// percentage.  It will be converted on the other side, so that if
-	// the ball left one tenth of the way up the screen, it will enter
-	// at the same proportionate height.
+	// Before throwing, normalize the Y coordinate to a dimensionless
+	// percentage.  Recipient converts it based on their own dimentions,
+	// so that if the ball left one tenth of the way up the screen, it
+	// will enter at the same proportionate height.
 	b.SetPos(b.GetPos().X, b.GetPos().Y/table.scn.Height())
 	table.chBallCommand <- model.BallCommand{b, direction}
 }
@@ -375,7 +375,7 @@ func (table *Table) quit() {
 	if table.chatty {
 		log.Println("Sending shutdown to v23.")
 	}
-	// Wait for the v23 manager to shutdown.
+	// Wait for v23 manager to shutdown.
 	ch := make(chan bool)
 	table.chV23 <- ch
 	<-ch
