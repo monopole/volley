@@ -1,7 +1,7 @@
 # volley
 An exploration of Go + GL + mobile + v23
 
-## Install factory-ready prerequisites
+## Install prerequisites
 
 For bootstrapping, prefer a clean environment.
 
@@ -12,7 +12,17 @@ originalPath=$PATH
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 ```
 
-### Set up Android development
+
+### Setup for X11 development (ubuntu)
+
+Install supplemental GL libs.
+See notes [here](https://github.com/golang/mobile/blob/master/app/x11.go#L15).
+```
+sudo apt-get install libegl1-mesa-dev libgles2-mesa-dev libx11-dev
+```
+
+
+### Setup for Android development
 
 Android's `adb` is a prerequisite.
 
@@ -41,19 +51,19 @@ PATH=~/android-sdk-linux/platform-tools:$PATH
 adb version
 ```
 
-### Set up iOS development
+### Setup for iOS development
 
 
 #### Become an app developer 
 
 
 * Install XCode, perhaps: `xcode-select --install`
-* Get git from [http://git-scm.com/download/mac]
+* Get [git](http://git-scm.com/download/mac).
 * Get provisioned to become an ios app developer (apple ID, etc.)
 
-#### install ios-deploy
+#### install [ios-deploy](https://github.com/phonegap/ios-deploy)
 
-Perhaps:
+Maybe:
 ```
 ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 brew install node
@@ -132,6 +142,8 @@ GOPATH=$BERRY go install v.io/x/ref/services/agent/...
 GOPATH=$BERRY go install v.io/x/ref/services/mounttable/...
 ```
 
+Alternatively, try this [tarball](https://drive.google.com/a/google.com/file/d/0B_KAJdV1hyzkQndMLTBabUcxdGM/view).
+
 ## Fix crypto libs
 
 See https://vanadium.googlesource.com/third_party/+log/master/go/src/golang.org/x/crypto
@@ -150,13 +162,6 @@ Edit this file, *removing* `,!arm` from the `+build` line:
 $BERRY/src/golang.org/x/crypto/poly1305/sum_ref.go
 ```
 
-
-## Install supplemental GL libs for ubuntu
-
-See notes [here](https://github.com/golang/mobile/blob/master/app/x11.go#L15).
-```
-sudo apt-get install libegl1-mesa-dev libgles2-mesa-dev libx11-dev
-```
 
 ## Install Go mobile stuff
 
@@ -191,20 +196,20 @@ VDLROOT=$BERRY/src/v.io/v23/vdlroot \
 
 ## Setup your network
 
-All devices that are part of the game need to be able to find a v23
-`mounttable` and each other.
+__All devices that are part of the game need to be able to find a v23
+`mounttable` and each other.__
 
 
-### Get on a local network
+### Get on a local network, e.g.
 
 * Open a wifi access point on a phone.
 * Connect all devices to it - they should
-  get ip numbers like '192.168.*.*'
+  get ip numbers like `192.168.*.*`
 * __Drop firewall__ on your laptop, e.g. on linux
-  try [this script](https://github.com/monopole/croupier/blob/master/nofw.sh) to drop your F
+  try [this script](https://github.com/monopole/croupier/blob/master/nofw.sh).
 
-Don't run any game instances until this is done, as the game
-may hang on network attempts without any feedback.
+__Don't run any game instances until this is done__, as the game may
+hang on network attempts without any feedback.
 
 ### Run a mounttable
 
@@ -214,11 +219,10 @@ Pick a laptop on the network and discover its IP address.
 ifconfig | grep "inet addr"
 ```
 
-Store this important address in an env var for use in commands below:
+Store this important address in an env var (replacing __x__ appropriately):
 ```
 export MT_HOST=192.168.x.x
 ```
-replacing __x__ appropriately.
 
 On said laptop, run a mounttable.
 Game instances need this to find each other.
@@ -234,8 +238,10 @@ the same WAP, run this
 $BERRY/bin/namespace --v23.namespace.root /${MT_HOST}:23000 glob -l '*/*'
 ```
 
-It should immediately return with no output, indicating an empty mount
-table.  Later, when games are running, all game instances will appear
+It should __immediately__ return with no output, indicating an empty mount
+table.  If it's not fast, try pinging to confirm that the network is up.
+
+Later, when games are running, all game instances will appear
 in the table.
 
 
@@ -256,7 +262,8 @@ refer to the IP discussed above.
 Build `volley` for the  desktop.
 
 This app derived from the
-[gomobile basic example](https://godoc.org/golang.org/x/mobile/example/basic).
+[gomobile basic example](https://github.com/golang/mobile/blob/master/example/basic/main.go)
+([godoc here](https://godoc.org/golang.org/x/mobile/example/basic)).
 
 ```
 GOPATH=$BERRY go install $GITDIR/volley
@@ -292,7 +299,7 @@ Plug your device into a USB port.
 ### Android
 
 Be sure you see the device from your computer.
-A sequyence that sometimes works is:
+A sequence that sometimes works is:
 
 ```
 # Disconnect device
@@ -311,7 +318,8 @@ To deploy the app:
 GOPATH=$BERRY gomobile install $GITDIR/volley
 ```
 
-The app should appear as `aaaVolley`.
+The app should appear as `aaaVolley` per the `application` tag
+in the [manifest](https://github.com/monopole/croupier/blob/master/volley/AndroidManifest.xml).
 
 ```
 adb logcat > log.txt
