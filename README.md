@@ -292,7 +292,10 @@ hop to the second window.
 The `namespace` command above should now show two entries:
 `volley/player0001` and `volley/player0002`
 
-## Try the mobile version
+## Try the mobile device version
+
+__Be sure your device is on the local network, so it has a chance of
+seeing the mounttable, or it simply won't work.__
 
 Plug your device into a USB port.
 
@@ -321,10 +324,9 @@ GOPATH=$BERRY gomobile install $GITDIR/volley
 The app should appear as `aaaVolley` per the `application` tag
 in the [manifest](https://github.com/monopole/croupier/blob/master/volley/AndroidManifest.xml).
 
-```
-adb logcat > log.txt
-```
+Just click to run, there's no further setup.
 
+It the app finds the mounttable, it will join the game.
 
 ### ioS
 
@@ -333,3 +335,7 @@ GOPATH=$BERRY gomobile init
 GOPATH=$BERRY $BERRY/bin/gomobile build -target=ios $GITDIR/volley
 ios-deploy --bundle volley.app
 ```
+
+Just click to run, there's no further setup.
+
+It the app finds the mounttable, it will join the game.
