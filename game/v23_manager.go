@@ -347,10 +347,10 @@ func (gm *V23Manager) sayGoodbyeToEveryone() {
 		}
 		if err := vp.c.Forget(
 			gm.ctx, wp, options.SkipServerEndpointAuthorization{}); err != nil {
-			log.Printf("Forget failed, but continuing; err=", err)
+			log.Println("Forget failed, but continuing; err=", err)
 		}
 		if gm.chatty {
-			log.Printf("Forget call completed.")
+			log.Println("Forget call completed.")
 		}
 	}
 }
