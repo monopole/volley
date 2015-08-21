@@ -1,10 +1,9 @@
-# croupier
-Multi-device Go+GL+v23 demo.
-
+# volley
+An exploration of Go + GL + mobile + v23
 
 ## Install factory-ready prerequisites
 
-For bootstrapping, prefer a very clean environment.
+For bootstrapping, prefer a clean environment.
 
 ```
 unset GOROOT
@@ -42,11 +41,28 @@ PATH=~/android-sdk-linux/platform-tools:$PATH
 adb version
 ```
 
-### Setup for iOS development
+### Set up iOS development
 
-* `xcode-select --install`
+
+#### Become an app developer 
+
+
+* Install XCode, perhaps: `xcode-select --install`
 * Get git from [http://git-scm.com/download/mac]
-* remainder _TBD_
+* Get provisioned to become an ios app developer (apple ID, etc.)
+
+#### install ios-deploy
+
+Perhaps:
+```
+ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+brew install node
+npm install -g ios-deploy
+make install prefix=/usr/local
+ios-deploy
+```
+
+
 
 ### Install Go 1.5 beta
 
@@ -149,7 +165,7 @@ GOPATH=$BERRY go get golang.org/x/mobile/cmd/gomobile
 GOPATH=$BERRY gomobile init
 ```
 
-## Install game software
+## Install volley software
 
 Create and fill `$BERRY/src/github.com/monopole/croupier`.
 
@@ -173,10 +189,73 @@ VDLROOT=$BERRY/src/v.io/v23/vdlroot \
     $BERRY/bin/vdl generate --lang go $BERRY/src/$GITDIR/ifc
 ```
 
-## Test desktop mode
+## Setup your network
 
-Build `croupier` for the  desktop.
-This app is a small modification of the
+All devices that are part of the game need to be able to find a v23
+`mounttable` and each other.
+
+
+### Get on a local network
+
+* Open a wifi access point on a phone.
+* Connect all devices to it - they should
+  get ip numbers like '192.168.*.*'
+* __Drop firewall__ on your laptop, e.g. on linux
+  try [this script](https://github.com/monopole/croupier/blob/master/nofw.sh) to drop your F
+
+Don't run any game instances until this is done, as the game
+may hang on network attempts without any feedback.
+
+### Run a mounttable
+
+Pick a laptop on the network and discover its IP address.
+
+```
+ifconfig | grep "inet addr"
+```
+
+Store this important address in an env var for use in commands below:
+```
+export MT_HOST=192.168.x.x
+```
+replacing __x__ appropriately.
+
+On said laptop, run a mounttable.
+Game instances need this to find each other.
+
+```
+$BERRY/bin/mounttabled --v23.tcp.address /${MT_HOST}:23000 &
+```
+
+To verify that the table is up, on another laptop connected to
+the same WAP, run this
+
+```
+$BERRY/bin/namespace --v23.namespace.root /${MT_HOST}:23000 glob -l '*/*'
+```
+
+It should immediately return with no output, indicating an empty mount
+table.  Later, when games are running, all game instances will appear
+in the table.
+
+
+### Edit the app config.
+
+Discovery is pretty bad right now.
+
+One must hardcode the IP of the mounttable in the app
+before building and deploying it.
+
+Edit [`config.go`](https://github.com/monopole/croupier/blob/master/config/config.go#L32)
+and change the line `MountTableHost` to
+refer to the IP discussed above.
+
+
+## Build and Run
+
+Build `volley` for the  desktop.
+
+This app derived from the
 [gomobile basic example](https://godoc.org/golang.org/x/mobile/example/basic).
 
 ```
@@ -185,14 +264,13 @@ GOPATH=$BERRY go install $GITDIR/volley
 
 Check the namespace:
 ```
-namespace --v23.namespace.root /104.197.96.113:3389 glob -l '*/*'
+namespace --v23.namespace.root /${MT_HOST}:23000 glob -l '*/*'
 ```
 
 Open another terminal and run
 ```
 volley
 ```
-
 
 You should see a new window with a triangle.
 
@@ -201,42 +279,49 @@ Open yet _another_ terminal and run
 volley
 ```
 
-This window should not have a triangle in the center, though
-it might have some artifacts on the side.
-
-Drag the triangle in the first window.
-On release, it should hop to the second window.
-It should be possible to send it back.
-
+Quickly swipe the triangle in the first window.  It should
+hop to the second window.
 
 The `namespace` command above should now show two entries:
 `volley/player0001` and `volley/player0002`
 
-__To run with more than two devices (a 'device' == a desktop terminal
-or an app running on a phone), one must change the the constant
-`expectedInstances` in the file
-[game_manager.go](https://github.com/monopole/mutantfortune/blob/master/croupier/util/game_manager.go).__
-
-
 ## Try the mobile version
 
-The mobile app counts as a "device" against the  limit set by
-`expectedInstances`, so for the default value of two, only
-one desktop terminal is allowed.
+Plug your device into a USB port.
 
-Plug your dev phone into a USB port.
+### Android
 
-Enter this:
+Be sure you see the device from your computer.
+A sequyence that sometimes works is:
 
+```
+# Disconnect device
+# In device, turn off developer options
+# In device, turn it back on, be sure that USB debugging is enabled
+adb kill-server
+adb start-server
+# Plug in the device.
+adb devices
+# The following reports log lines labelled GoLog.
+adb logcat | grep GoLog
+```
+
+To deploy the app:
 ```
 GOPATH=$BERRY gomobile install $GITDIR/volley
 ```
 
-You should see a triangle (or not) depending on the order in which you launched it with
-respect to other instances of the app.
-
-To debug:
+The app should appear as `aaaVolley`.
 
 ```
 adb logcat > log.txt
+```
+
+
+### ioS
+
+```
+GOPATH=$BERRY gomobile init
+GOPATH=$BERRY $BERRY/bin/gomobile build -target=ios $GITDIR/volley
+ios-deploy --bundle volley.app
 ```

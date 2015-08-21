@@ -1,13 +1,5 @@
 //  See https://github.com/golang/mobile/blob/master/example/network/main.go
 //
-// # disconnect phone
-// # turn off developer options
-// # turn it back on, be sure that USB debugging is enabled
-// adb kill-server
-// adb start-server
-// # plug the device in
-// adb devices
-// adb logcat | grep GoLog
 //
 // export GITDIR=github.com/monopole/croupier
 //
