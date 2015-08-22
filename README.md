@@ -89,8 +89,7 @@ curl $tarball -o - | sudo tar -C /usr/local -xzf -
 
 #### Add to PATH
 ```
-PATH=~/go/bin:$PATH
-~/go/bin/go version
+PATH=/usr/local/go/bin:$PATH
 go version
 ```
 
