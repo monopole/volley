@@ -163,22 +163,18 @@ VDLROOT=$BERRY/src/v.io/v23/vdlroot \
     $BERRY/bin/vdl generate --lang go $BERRY/src/$GITDIR/ifc
 ```
 
-## Setup your networks
+## Setup your network
 
-__All devices that are part of the game need to be able to find a v23
-`mounttable` and each other.__
+Each game instance must be able to communicate with other instances
+and with a v23 mounttable (discussed below).
 
-This can be a challenge in a controlled corporate network.
-
-A workaround is to open a wifi access point on a phone and
+One means to allow this is to start a wifi access point on a phone and
 connect everything to it.
-
-The devices will be given IP addresses `192.168.*.*`.
 
 ##### __Drop laptop firewalls__ 
 
 In the exercise below, at least one laptop is required to run a
-visible mounttable (not to mention build software etc.).
+v23 mounttable (as well as build software etc.).
 
 On that latop, or any other laptops which will run the game, drop the
 firewall.
@@ -195,6 +191,7 @@ hang on network attempts without any feedback.
 ### Run a mounttable
 
 Pick a laptop on the network and discover its IP address.
+IP addresses assigned by a local WAP have the form `192.168.*.*`
 
 ```
 ifconfig | grep "inet addr"
@@ -202,7 +199,6 @@ ifconfig | grep "inet addr"
 
 Store this important address in an env var (replacing __x__ appropriately):
 ```
-export MT_HOST=127.0.0.1  # For single machine testing obviously.
 export MT_HOST=192.168.x.x
 ```
 
