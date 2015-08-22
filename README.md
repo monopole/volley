@@ -168,23 +168,29 @@ VDLROOT=$BERRY/src/v.io/v23/vdlroot \
 __All devices that are part of the game need to be able to find a v23
 `mounttable` and each other.__
 
+This can be a challenge in a controlled corporate network.
 
-### Define a common network, e.g.
+A workaround is to open a wifi access point on a phone and
+connect everything to it.
 
-##### Open a wifi access point on a phone.
-##### Connect everything to it
+The devices will be given IP addresses `192.168.*.*`.
 
-Connect your laptop and all devices to it - they should
-  get ip numbers like `192.168.*.*`
-##### __Drop the firewall__ on your laptop
+##### __Drop laptop firewalls__ 
 
-E.g. on linux try
+In the exercise below, at least one laptop is required to run a
+visible mounttable (not to mention build software etc.).
+
+On that latop, or any other laptops which will run the game, drop the
+firewall.
+
+E.g. on linux try this port-unspecific hammer
 ```
 sudo $BERRY/src/github.com/monopole/croupier/nofw.sh 
 ```
 
 __Don't run any game instances until this is done__, as the game may
 hang on network attempts without any feedback.
+
 
 ### Run a mounttable
 
@@ -223,19 +229,24 @@ all game instances will appear in the table.
 If the request appears to hang, eventually timing out, then something
 is wrong with the network.  Try pinging.  Try shutting down firewalls.
 
-
-
 ### Edit the app config.
 
 The _discovery_ aspect of the game hasn't had any work done yet,
-so one must _hardcode_ the mounttable `IP:port` in the app
+so one must hardcode the mounttable's `IP:port` in the app
 before building and deploying it. 
 
-In [`$BERRY/src/github.com/monopole/croupier/config/config.go`](https://github.com/monopole/croupier/blob/master/config/config.go)
-change `MountTableHost` to
-refer to the raw IP discussed above.
+Do so by changing the value of `MountTableHost` in
+[`croupier/config/config.go`](https://github.com/monopole/croupier/blob/master/config/config.go)
+to the value of `$MT_HOST`.
+
 Change the port too if necessary.
 
+If the current value is `127.0.0.1`, these linux commands do the job:
+```
+(cf=$BERRY/src/$GITDIR/config/config.go
+ sed -i s/127.0.0.1/$MT_HOST/ $cf
+ grep MountTableHost $cf)
+```
 
 ## Build and Run
 
