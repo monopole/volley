@@ -102,6 +102,7 @@ pointed to by `BERRY`.
 ```
 export BERRY=~/pumpkin
 PATH=$BERRY/bin:$PATH
+GOPATH=$BERRY
 ```
 
 Optionally wipe it
@@ -119,38 +120,20 @@ __Because of code mirror server failures, one may have to repeat these
 incantations a few times.__
 
 ```
-GOPATH=$BERRY go get -d v.io/x/ref/...
-GOPATH=$BERRY go install v.io/x/ref/cmd/...
-GOPATH=$BERRY go install v.io/x/ref/services/agent/...
-GOPATH=$BERRY go install v.io/x/ref/services/mounttable/...
+go get -d v.io/x/ref/...
+go install v.io/x/ref/cmd/...
+go install v.io/x/ref/services/agent/...
+go install v.io/x/ref/services/mounttable/...
 ```
 
 Alternatively, try this [tarball](https://drive.google.com/a/google.com/file/d/0B_KAJdV1hyzkQndMLTBabUcxdGM/view).
-
-## Fix crypto libs
-
-See https://vanadium.googlesource.com/third_party/+log/master/go/src/golang.org/x/crypto
-
-Edit these two files, _adding_ a bogus hardware (e.g. `,jeep`) target to
-the `+build` line:
-
-```
-$BERRY/src/golang.org/x/crypto/poly1305/poly1305_arm.s
-$BERRY/src/golang.org/x/crypto/poly1305/sum_arm.go
-```
-
-Edit this file, *removing* `,!arm` from the `+build` line:
-
-```
-$BERRY/src/golang.org/x/crypto/poly1305/sum_ref.go
-```
 
 
 ## Install Go mobile stuff
 
 ```
-GOPATH=$BERRY go get golang.org/x/mobile/cmd/gomobile
-GOPATH=$BERRY gomobile init
+go get golang.org/x/mobile/cmd/gomobile
+gomobile init
 ```
 
 ## Install volley software
@@ -165,7 +148,7 @@ GITDIR=github.com/monopole/croupier
 
 Grab the code:
 ```
-GOPATH=$BERRY go get -d $GITDIR
+go get -d $GITDIR
 ```
 
 Generate the Go that was missing and build the v23 fortune server
@@ -183,7 +166,7 @@ __All devices that are part of the game need to be able to find a v23
 `mounttable` and each other.__
 
 
-### Get on a local network, e.g.
+### Define a common network, e.g.
 
 * Open a wifi access point on a phone.
 * Connect all devices to it - they should
@@ -212,14 +195,14 @@ On said laptop, run a mounttable daemon.
 Game instances need this to find each other.
 
 ```
-$BERRY/bin/mounttabled --v23.tcp.address ${MT_HOST}:23000 &
+mounttabled --v23.tcp.address ${MT_HOST}:23000 &
 ```
 
 To verify that the table is up, on another laptop connected to
 the same WAP, query it from another computer:
 
 ```
-$BERRY/bin/namespace --v23.namespace.root /${MT_HOST}:23000 glob -l '*/*'
+namespace --v23.namespace.root /${MT_HOST}:23000 glob -l '*/*'
 ```
 
 This is basically `ls` for the mount table.
@@ -254,7 +237,7 @@ This app derived from the
 ([godoc here](https://godoc.org/golang.org/x/mobile/example/basic)).
 
 ```
-GOPATH=$BERRY go install $GITDIR/volley
+go install $GITDIR/volley
 ```
 
 Check the namespace:
@@ -306,7 +289,7 @@ adb logcat | grep GoLog
 
 To deploy the app:
 ```
-GOPATH=$BERRY gomobile install $GITDIR/volley
+gomobile install $GITDIR/volley
 ```
 
 The app should appear as `aaaVolley` per the `application` tag
@@ -319,8 +302,8 @@ It the app finds the mounttable, it will join the game.
 ### ioS
 
 ```
-GOPATH=$BERRY gomobile init
-GOPATH=$BERRY $BERRY/bin/gomobile build -target=ios $GITDIR/volley
+gomobile init
+$BERRY/bin/gomobile build -target=ios $GITDIR/volley
 ios-deploy --bundle volley.app
 ```
 
