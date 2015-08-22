@@ -13,7 +13,7 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 ```
 
 
-### Setup for X11 development (ubuntu)
+### X11 development (ubuntu)
 
 Install supplemental GL libs.
 See notes [here](https://github.com/golang/mobile/blob/master/app/x11.go#L15).
@@ -22,7 +22,7 @@ sudo apt-get install libegl1-mesa-dev libgles2-mesa-dev libx11-dev
 ```
 
 
-### Setup for Android development
+### Android development
 
 Android's `adb` is a prerequisite.
 
@@ -51,11 +51,10 @@ PATH=~/android-sdk-linux/platform-tools:$PATH
 adb version
 ```
 
-### Setup for iOS development
+### OSX/iOS development
 
 
 #### Become an app developer 
-
 
 * Install XCode, perhaps: `xcode-select --install`
 * Get [git](http://git-scm.com/download/mac).
@@ -83,7 +82,6 @@ Full instructions [here](https://golang.org/doc/install).
 
 The following should work on a 64-bit linux box:
 ```
-# The following writes to go
 sudo mv -n /usr/local/go /usr/local/old_go
 tarball=https://storage.googleapis.com/golang/go1.5.linux-amd64.tar.gz
 curl $tarball -o - | sudo tar -C /usr/local -xzf -
