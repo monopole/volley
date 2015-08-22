@@ -1,32 +1,30 @@
-//  See https://github.com/golang/mobile/blob/master/example/network/main.go
-//
-//
-// export GITDIR=github.com/monopole/croupier
+// export MT_HOST=192.168.43.136
 //
 // $BERRY/bin/mounttabled --v23.tcp.address :23000 &
 //
-// export MT_HOST=192.168.43.136
-//
 // $BERRY/bin/namespace --v23.namespace.root /${MT_HOST}:23000 glob -l '*/*'
+//
+// GOPATH=$BERRY go install $GITDIR/volley
 //
 // GOPATH=$BERRY $BERRY/bin/gomobile install $GITDIR/volley
 
 package config
 
-const Chatty = true
+const (
+	// MountTableHost = "104.197.96.113" // Asim's gce instance
+	// MountTableHost = "192.168.2.71"  // my laptop on house net
+	// MountTableHost = "192.168.43.136" // my latop on motox net
+	// MountTableHost = "127.0.0.1"
+	MountTableHost = "192.168.43.27" // motox hotspot
 
-const RootName = "volley/player"
+	// MountTablePort = "3389" // Asim's preferred port
+	MountTablePort = "23000"
+)
 
-// const MountTableHost = "104.197.96.113" // Asim's gce instance
-// const MountTableHost = "192.168.2.71"  // my laptop on house net
-// const MountTableHost = "192.168.43.136" // my latop on motox net
-// const MountTableHost = "localhost"
-const MountTableHost = "192.168.43.27"
-
-// const MountTablePort = "3389" // Asim's preferred port
-const MountTablePort = "23000"
-
-const NamespaceRoot = "/" + MountTableHost + ":" + MountTablePort
-
-const FailFast = true
-const TestDomain = "http://www.example.com"
+const (
+	NamespaceRoot = "/" + MountTableHost + ":" + MountTablePort
+	FailFast      = true
+	TestDomain    = "http://www.example.com"
+	Chatty        = true
+	RootName      = "volley/player"
+)

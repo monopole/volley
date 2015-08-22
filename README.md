@@ -221,40 +221,44 @@ ifconfig | grep "inet addr"
 
 Store this important address in an env var (replacing __x__ appropriately):
 ```
+export MT_HOST=127.0.0.1  # For single machine testing obviously.
 export MT_HOST=192.168.x.x
 ```
 
-On said laptop, run a mounttable.
+On said laptop, run a mounttable daemon.
 Game instances need this to find each other.
 
 ```
-$BERRY/bin/mounttabled --v23.tcp.address /${MT_HOST}:23000 &
+$BERRY/bin/mounttabled --v23.tcp.address ${MT_HOST}:23000 &
 ```
 
 To verify that the table is up, on another laptop connected to
-the same WAP, run this
+the same WAP, query it from another computer:
 
 ```
 $BERRY/bin/namespace --v23.namespace.root /${MT_HOST}:23000 glob -l '*/*'
 ```
 
-It should __immediately__ return with no output, indicating an empty mount
-table.  If it's not fast, try pinging to confirm that the network is up.
+This is basically `ls` for the mount table.
 
-Later, when games are running, all game instances will appear
-in the table.
+If this __immediately__ returns with no output, you're good - the
+mounttable was contacted and is empty.  Later, when games are running,
+all game instances will appear in the table.
+
+If the request appears to hang, eventually timing out, then something
+is wrong with the network.  Try pinging.  Try shutting down firewalls.
+
 
 
 ### Edit the app config.
 
-Discovery is pretty bad right now.
+The _discover others_ aspect of the game hasn't had any work done yet,
+so one must _hardcode the mounttable `IP:port` in the app
+before building and deploying it. 
 
-One must hardcode the IP of the mounttable in the app
-before building and deploying it.
-
-Edit [`config.go`](https://github.com/monopole/croupier/blob/master/config/config.go#L32)
-and change the line `MountTableHost` to
-refer to the IP discussed above.
+Edit [`config.go`](https://github.com/monopole/croupier/blob/master/config/config.go)
+and change `MountTableHost` to
+refer to the raw IP discussed above.  Change the port too if necessary.
 
 
 ## Build and Run
