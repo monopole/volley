@@ -101,8 +101,6 @@ pointed to by `BERRY`.
 
 ```
 export BERRY=~/pumpkin
-PATH=$BERRY/bin:$PATH
-GOPATH=$BERRY
 ```
 
 Optionally wipe it
@@ -111,6 +109,11 @@ Optionally wipe it
 mkdir $BERRY
 ```
 
+Assure that the commands below work:
+```
+PATH=$BERRY/bin:$PATH
+export GOPATH=$BERRY
+```
 
 ## Install v23 as an end-user
 
@@ -140,7 +143,7 @@ gomobile init
 
 Create and fill `$BERRY/src/github.com/monopole/croupier`.
 
-Ignore complaints about _No buildable Go source_.
+_Ignore_ complaints about `No buildable Go source`.
 
 ```
 GITDIR=github.com/monopole/croupier
@@ -160,7 +163,7 @@ VDLROOT=$BERRY/src/v.io/v23/vdlroot \
     $BERRY/bin/vdl generate --lang go $BERRY/src/$GITDIR/ifc
 ```
 
-## Setup your network
+## Setup your networks
 
 __All devices that are part of the game need to be able to find a v23
 `mounttable` and each other.__
@@ -169,7 +172,7 @@ __All devices that are part of the game need to be able to find a v23
 ### Define a common network, e.g.
 
 * Open a wifi access point on a phone.
-* Connect all devices to it - they should
+* Connect your laptop and all devices to it - they should
   get ip numbers like `192.168.*.*`
 * __Drop firewall__ on your laptop, e.g. on linux
   try [this script](https://github.com/monopole/croupier/blob/master/nofw.sh).
