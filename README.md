@@ -74,34 +74,20 @@ ios-deploy
 
 
 
-### Install Go 1.5 beta
+### Install Go 1.5
 
-Go 1.5 required (still beta as of July 2015).
 
 #### Install
 
-Full instructions [here](http://golang.org/doc/install/source), or try this:
+Full instructions [here](https://golang.org/doc/install).
 
+The following should work on a 64-bit linux box:
 ```
-cd
-
-# The following writes to ./go
-/bin/rm -rf go
-curl https://storage.googleapis.com/golang/go1.4.2.linux-amd64.tar.gz -o - \
-    | tar xzf -
-
-# Get this ‘go’ out of the way for go1.5 beta (which needs 1.4.2 to build it)
-mv go go1.4.2
-
-# Build Go from head per http://golang.org/doc/install/source
-git clone https://go.googlesource.com/go
-cd go
-git checkout master
-cd src
-# GOROOT_BOOTSTRAP=/usr/local/go ./all.bash
-GOROOT_BOOTSTRAP=$HOME/go1.4.2 ./all.bash
+# The following writes to go
+sudo mv -n /usr/local/go /usr/local/old_go
+tarball=https://storage.googleapis.com/golang/go1.5.linux-amd64.tar.gz
+curl $tarball -o - | sudo tar -C /usr/local -xzf -
 ```
-
 
 #### Add to PATH
 ```
