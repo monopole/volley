@@ -235,13 +235,14 @@ is wrong with the network.  Try pinging.  Try shutting down firewalls.
 
 ### Edit the app config.
 
-The _discover others_ aspect of the game hasn't had any work done yet,
-so one must _hardcode the mounttable `IP:port` in the app
+The _discovery_ aspect of the game hasn't had any work done yet,
+so one must _hardcode_ the mounttable `IP:port` in the app
 before building and deploying it. 
 
-Edit [`config.go`](https://github.com/monopole/croupier/blob/master/config/config.go)
-and change `MountTableHost` to
-refer to the raw IP discussed above.  Change the port too if necessary.
+In [`$BERRY/src/github.com/monopole/croupier/config/config.go`](https://github.com/monopole/croupier/blob/master/config/config.go)
+change `MountTableHost` to
+refer to the raw IP discussed above.
+Change the port too if necessary.
 
 
 ## Build and Run
