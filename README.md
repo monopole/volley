@@ -171,12 +171,10 @@ and with a v23 mounttable (discussed below).
 One means to allow this is to start a wifi access point on a phone and
 connect everything to it.
 
-##### __Drop laptop firewalls__ 
+### __Drop laptop firewalls__ 
 
-In the exercise below, at least one laptop is required to run a
-v23 mounttable (as well as build software etc.).
-
-On that latop, or any other laptops which will run the game, drop the
+In the exercise below, one must run a mounttable on a laptop.  On that
+latop, or any other laptops which will run the game, drop the
 firewall.
 
 E.g. on linux try this port-unspecific hammer
@@ -225,7 +223,7 @@ all game instances will appear in the table.
 If the request appears to hang, eventually timing out, then something
 is wrong with the network.  Try pinging.  Try shutting down firewalls.
 
-### Edit the app config.
+### Edit the app config
 
 The _discovery_ aspect of the game hasn't had any work done yet,
 so one must hardcode the mounttable's `IP:port` in the app
