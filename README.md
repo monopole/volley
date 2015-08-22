@@ -79,8 +79,8 @@ ios-deploy
 #### Install
 
 Full instructions [here](https://golang.org/doc/install).
+On a 64-bit linux box, just try this:
 
-The following should work on a 64-bit linux box:
 ```
 sudo mv -n /usr/local/go /usr/local/old_go
 tarball=https://storage.googleapis.com/golang/go1.5.linux-amd64.tar.gz
