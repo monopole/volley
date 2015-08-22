@@ -109,7 +109,7 @@ Optionally wipe it
 mkdir $BERRY
 ```
 
-Assure that the commands below work:
+Modify paths to make later commands shorter.
 ```
 PATH=$BERRY/bin:$PATH
 export GOPATH=$BERRY
