@@ -171,11 +171,17 @@ __All devices that are part of the game need to be able to find a v23
 
 ### Define a common network, e.g.
 
-* Open a wifi access point on a phone.
-* Connect your laptop and all devices to it - they should
+##### Open a wifi access point on a phone.
+##### Connect everything to it
+
+Connect your laptop and all devices to it - they should
   get ip numbers like `192.168.*.*`
-* __Drop firewall__ on your laptop, e.g. on linux
-  try [this script](https://github.com/monopole/croupier/blob/master/nofw.sh).
+##### __Drop the firewall__ on your laptop
+
+E.g. on linux try
+```
+sudo $BERRY/src/github.com/monopole/croupier/nofw.sh 
+```
 
 __Don't run any game instances until this is done__, as the game may
 hang on network attempts without any feedback.
@@ -248,16 +254,16 @@ Check the namespace:
 namespace --v23.namespace.root /${MT_HOST}:23000 glob -l '*/*'
 ```
 
-Open another terminal and run
+Open another terminal and run (adjusting path as needed obviously)
 ```
-volley
+~/pumpkin/bin/volley
 ```
 
 You should see a new window with a triangle.
 
 Open yet _another_ terminal and run
 ```
-volley
+~/pumpkin/bin/volley
 ```
 
 Quickly swipe the triangle in the first window.  It should
