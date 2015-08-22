@@ -191,13 +191,11 @@ hang on network attempts without any feedback.
 Pick a laptop on the network and discover its IP address.
 IP addresses assigned by a local WAP have the form `192.168.*.*`
 
+Store this important address in an env var:
 ```
-ifconfig | grep "inet addr"
-```
-
-Store this important address in an env var (replacing __x__ appropriately):
-```
-export MT_HOST=192.168.x.x
+sedPa="s/.*(192\.168\.[0-9]+\.[0-9]+).*/\1/p"
+export MT_HOST=`ifconfig | grep "inet addr:192.168" | sed -rn $sedPa`
+echo MT_HOST=$MT_HOST
 ```
 
 On said laptop, run a mounttable daemon.
