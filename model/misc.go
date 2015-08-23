@@ -16,6 +16,14 @@ const (
 	Closed
 )
 
+func (s DoorState) String() string {
+	if s == Open {
+		return "open"
+	} else {
+		return "closed"
+	}
+}
+
 type Direction int
 
 const (
@@ -23,23 +31,19 @@ const (
 	Right
 )
 
+func (s Direction) String() string {
+	if s == Left {
+		return "left"
+	} else {
+		return "right"
+	}
+}
+
 type DoorCommand struct {
 	S DoorState
 	D Direction
 }
 
 func (dc DoorCommand) String() string {
-	if dc.S == Open {
-		if dc.D == Left {
-			return "open-left"
-		} else {
-			return "open-right"
-		}
-	} else {
-		if dc.D == Left {
-			return "close-left"
-		} else {
-			return "close-right"
-		}
-	}
+	return dc.S.String() + "-" + dc.D.String()
 }

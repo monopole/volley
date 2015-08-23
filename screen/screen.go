@@ -89,7 +89,6 @@ func NewScreen() *Screen {
 }
 
 func (s *Screen) Start() {
-
 	for i, c := range playerColors {
 		playerColors[i] = Color{c.R / 255.0, c.G / 255.0, c.B / 255.0}
 	}

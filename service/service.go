@@ -16,18 +16,18 @@ import (
 )
 
 type Relay struct {
-	chRecognize    chan *model.Player
-	chForget       chan *model.Player
-	chIncomingBall chan *model.Ball
-	acceptingData  bool
-	mu             sync.RWMutex
+	chRecognize   chan *model.Player
+	chForget      chan *model.Player
+	chBall        chan *model.Ball
+	acceptingData bool
+	mu            sync.RWMutex
 }
 
 func MakeRelay() *Relay {
 	r := &Relay{}
 	r.chRecognize = make(chan *model.Player)
 	r.chForget = make(chan *model.Player)
-	r.chIncomingBall = make(chan *model.Ball)
+	r.chBall = make(chan *model.Ball)
 	r.acceptingData = true
 	return r
 }
@@ -39,15 +39,15 @@ func MakeRelay() *Relay {
 // With some extra work and a mutex member, we could add a more
 // complex lifecycle to turn off the relay and turn it back on at
 // will, to support leaving and re-entering the game without losing
-// one's number, name, and place in the mount table.  If off mode,
-// data from incoming RPC's would just get dropped on the floor
+// one's number, name, and place in the mount table.  In "idle" mode,
+// data from incoming RPC's would be dropped on the floor
 // instead of placed on the channel.
 func (x *Relay) Close() {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	close(x.chRecognize)
 	close(x.chForget)
-	close(x.chIncomingBall)
+	close(x.chBall)
 	x.acceptingData = false
 	if config.Chatty {
 		log.Printf("Refusing all data.")
@@ -63,7 +63,7 @@ func (x *Relay) ChForget() <-chan *model.Player {
 }
 
 func (x *Relay) ChIncomingBall() <-chan *model.Ball {
-	return x.chIncomingBall
+	return x.chBall
 }
 
 func (x *Relay) Recognize(_ *context.T, _ rpc.ServerCall, p ifc.Player) error {
@@ -122,7 +122,7 @@ func (x *Relay) Accept(_ *context.T, _ rpc.ServerCall, b ifc.Ball) error {
 			if config.Chatty {
 				log.Printf("Telling table to accept ball %v", ball)
 			}
-			x.chIncomingBall <- ball
+			x.chBall <- ball
 		} else {
 			log.Printf("Discarding ball.")
 		}

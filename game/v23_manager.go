@@ -25,6 +25,7 @@ import (
 	"v.io/v23/context"
 	"v.io/v23/naming"
 	"v.io/v23/options"
+	"v.io/v23/rpc"
 	_ "v.io/x/ref/runtime/factories/generic"
 )
 
@@ -42,6 +43,7 @@ type V23Manager struct {
 	rightDoor            model.DoorState
 	rootName             string
 	namespaceRoot        string
+	rpcOpts              rpc.CallOpt
 	relay                *service.Relay
 	myself               *model.Player
 	players              []*vPlayer
@@ -52,7 +54,9 @@ type V23Manager struct {
 }
 
 func NewV23Manager(
-	chatty bool, rootName string, namespaceRoot string) *V23Manager {
+	chatty bool,
+	rootName string,
+	namespaceRoot string) *V23Manager {
 	return &V23Manager{
 		chatty,
 		nil,          // ctx
@@ -62,17 +66,19 @@ func NewV23Manager(
 		model.Closed, // right door
 		rootName,
 		namespaceRoot,
+		options.SkipServerEndpointAuthorization{},
 		nil, // relay
 		nil, // myself
 		[]*vPlayer{},
-		nil, // initialPlayerNumbers
-		nil, // chBallCommands
-		make(chan chan bool),
+		nil,                  // initialPlayerNumbers
+		nil,                  // chBallCommands
+		make(chan chan bool), // quit
 		make(chan model.DoorCommand),
 	}
 }
 
-func (gm *V23Manager) Initialize() {
+// Return true if ready to call Run
+func (gm *V23Manager) IsReadyToRun() bool {
 	if gm.chatty {
 		log.Printf("Calling v23.Init")
 	}
@@ -110,19 +116,20 @@ func (gm *V23Manager) Initialize() {
 	err := s.Serve(myName, ifc.GameBuddyServer(gm.relay), MakeAuthorizer())
 	if err != nil {
 		log.Panic("Error serving service: ", err)
+		return false
 	}
+	return true
 }
 
 func (gm *V23Manager) ChDoorCommand() <-chan model.DoorCommand {
 	return gm.chDoorCommand
 }
 
-func (gm *V23Manager) ChQuit() chan<- chan bool {
-	return gm.chQuit
-}
-
 func (gm *V23Manager) ChIncomingBall() <-chan *model.Ball {
-	return gm.relay.ChIncomingBall()
+	if gm.relay != nil {
+		return gm.relay.ChIncomingBall()
+	}
+	return nil
 }
 
 func (gm *V23Manager) Me() *model.Player {
@@ -146,7 +153,7 @@ func (gm *V23Manager) recognizeOther(p *model.Player) {
 	gm.players[k] = vp
 
 	if gm.chatty {
-		log.Printf("I (%v) has recognized %v.", gm.Me(), p)
+		log.Printf("I (%v) recognize %v.", gm.Me(), p)
 	}
 	if gm.isRunning {
 		gm.checkDoors()
@@ -229,7 +236,7 @@ func (gm *V23Manager) checkDoors() {
 		gm.assureDoor(model.DoorCommand{model.Open, model.Right})
 	}
 	if gm.chatty {
-		log.Println("String with all players: ", gm.playersString())
+		log.Println("Current players: ", gm.playersString())
 	}
 }
 
@@ -258,42 +265,39 @@ func (gm *V23Manager) playersString() (s string) {
 }
 
 func (gm *V23Manager) assureDoor(dc model.DoorCommand) {
-	if dc.S == model.Open {
-		if dc.D == model.Left {
-			if gm.leftDoor == model.Open {
-				if gm.chatty {
-					log.Printf("Left door already open.\n")
-				}
-				return
+	switch dc {
+	case model.DoorCommand{model.Open, model.Left}:
+		if gm.leftDoor == model.Open {
+			if gm.chatty {
+				log.Printf("Left door already open.\n")
 			}
-			gm.leftDoor = model.Open
-		} else {
-			if gm.rightDoor == model.Open {
-				if gm.chatty {
-					log.Printf("Right door already open.\n")
-				}
-				return
-			}
-			gm.rightDoor = model.Open
+			return
 		}
-	} else {
-		if dc.D == model.Left {
-			if gm.leftDoor == model.Closed {
-				if gm.chatty {
-					log.Printf("Left door already closed.\n")
-				}
-				return
+		gm.leftDoor = model.Open
+	case model.DoorCommand{model.Open, model.Right}:
+		if gm.rightDoor == model.Open {
+			if gm.chatty {
+				log.Printf("Right door already open.\n")
 			}
-			gm.leftDoor = model.Closed
-		} else {
-			if gm.rightDoor == model.Closed {
-				if gm.chatty {
-					log.Printf("Right door already closed.\n")
-				}
-				return
-			}
-			gm.rightDoor = model.Closed
+			return
 		}
+		gm.rightDoor = model.Open
+	case model.DoorCommand{model.Closed, model.Left}:
+		if gm.leftDoor == model.Closed {
+			if gm.chatty {
+				log.Printf("Left door already closed.\n")
+			}
+			return
+		}
+		gm.leftDoor = model.Closed
+	case model.DoorCommand{model.Closed, model.Right}:
+		if gm.rightDoor == model.Closed {
+			if gm.chatty {
+				log.Printf("Right door already closed.\n")
+			}
+			return
+		}
+		gm.rightDoor = model.Closed
 	}
 	if gm.chDoorCommand == nil {
 		log.Panic("The door channel is nil.")
@@ -319,9 +323,7 @@ func (gm *V23Manager) sayHelloToEveryone() {
 			log.Printf("  gm.ctx %T = %v", gm.ctx, gm.ctx)
 			log.Printf("  wp %T = %v", wp, wp)
 		}
-		if err := vp.c.Recognize(
-			gm.ctx, wp,
-			options.SkipServerEndpointAuthorization{}); err != nil {
+		if err := vp.c.Recognize(gm.ctx, wp, gm.rpcOpts); err != nil {
 			// TODO: Instead of panicing, just drop the player from the players list.
 			log.Panic("Recognize failed: ", err)
 		}
@@ -345,8 +347,7 @@ func (gm *V23Manager) sayGoodbyeToEveryone() {
 			log.Printf("  gm.ctx %T = %v", gm.ctx, gm.ctx)
 			log.Printf("  wp %T = %v", wp, wp)
 		}
-		if err := vp.c.Forget(
-			gm.ctx, wp, options.SkipServerEndpointAuthorization{}); err != nil {
+		if err := vp.c.Forget(gm.ctx, wp, gm.rpcOpts); err != nil {
 			log.Println("Forget failed, but continuing; err=", err)
 		}
 		if gm.chatty {
@@ -440,51 +441,48 @@ func (gm *V23Manager) Run(cbc <-chan model.BallCommand) {
 	}
 }
 
+func (gm *V23Manager) throwBall(bc model.BallCommand) {
+	if gm.chatty {
+		log.Printf("v23 manager got ball throw command: %v\n", bc)
+	}
+	k := gm.findInsertion(gm.myself)
+	if bc.D == model.Left {
+		// Throw ball left.
+		k--
+		if k >= 0 {
+			gm.sendBallRpc(bc, gm.players[k])
+		} else {
+			log.Panic("Nobody on left!  Send back to table.")
+		}
+	} else {
+		// Throw ball right.
+		if k <= len(gm.players)-1 {
+			gm.sendBallRpc(bc, gm.players[k])
+		} else {
+			log.Panic("Nobody on right!  Send back to table.")
+		}
+	}
+}
+
+func (gm *V23Manager) sendBallRpc(bc model.BallCommand, vp *vPlayer) {
+	wb := serializeBall(bc.B)
+	log.Printf("RPC sending: throwing ball %v to %v : %v\n", bc.D, vp.p, vp.c)
+	if err := vp.c.Accept(gm.ctx, wb, gm.rpcOpts); err != nil {
+		log.Panic("Ball throw %v failed; err=%v", bc.D, err)
+	}
+	log.Printf("Ball throw %v RPC done.", bc.D)
+}
+
 func serializeBall(b *model.Ball) ifc.Ball {
 	wp := ifc.Player{int32(b.Owner().Id())}
 	return ifc.Ball{
 		wp, b.GetPos().X, b.GetPos().Y, b.GetVel().X, b.GetVel().Y}
 }
 
-func (gm *V23Manager) throwBall(bc model.BallCommand) {
-	if gm.chatty {
-		log.Printf("v23 manager got ball throw command: %v\n", bc)
-	}
-	k := gm.findInsertion(gm.myself)
-	wb := serializeBall(bc.B)
-	log.Printf("About to throw serialized ball = %v", wb)
-	if bc.D == model.Left {
-		// Throw ball left.
-		k--
-		if k >= 0 {
-			vp := gm.players[k]
-			log.Printf("RPC sending: throwing ball left to %v : %v\n", vp.p, vp.c)
-			if err := vp.c.Accept(
-				gm.ctx, wb,
-				options.SkipServerEndpointAuthorization{}); err != nil {
-				log.Panic("Ball throw left failed; err=", err)
-			}
-			log.Printf("RPC left seems to have worked.")
-		} else {
-			// Send ball back into table - at the moment, don't have the channel.
-			log.Panic("1 Nobody on left!  Refactor to get ball channel.")
-		}
-	} else {
-		// Throw ball right.
-		if k <= len(gm.players)-1 {
-			vp := gm.players[k]
-			log.Printf("RPC sending: throwing ball right to %v : %v\n", vp.p, vp.c)
-			if err := vp.c.Accept(
-				gm.ctx, wb,
-				options.SkipServerEndpointAuthorization{}); err != nil {
-				log.Panic("Ball throw right failed; err=", err)
-			}
-			log.Printf("RPC right seems to have worked.")
-		} else {
-			// Send ball back into table - at the moment, don't have the channel.
-			log.Panic("2 Nobody on the right!  Refactor to get ball channel.")
-		}
-	}
+func (gm *V23Manager) Quit() {
+	ch := make(chan bool)
+	gm.chQuit <- ch
+	<-ch
 }
 
 func (gm *V23Manager) quit() {
