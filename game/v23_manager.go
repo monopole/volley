@@ -509,9 +509,8 @@ func (gm *V23Manager) noNewBallsOrPeople() {
 	if gm.chatty {
 		log.Println("********************* No New Balls or people.")
 	}
-	gm.relay.StopAcceptingPlayers()
+	gm.relay.StopAcceptingData()
 	gm.sayGoodbyeToEveryone()
-	gm.relay.StopAcceptingBalls()
 }
 
 func (gm *V23Manager) Stop() {
@@ -525,7 +524,6 @@ func (gm *V23Manager) stop() {
 		log.Println("v23 calling native shutdown.")
 	}
 	gm.shutdown()
-	gm.relay.Stop()
 	if gm.chatty {
 		log.Println("v23: closing door command channel.")
 	}

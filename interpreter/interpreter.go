@@ -21,10 +21,10 @@ const (
 
 	// Start with generous slop.
 	defaultMaxDistSqForImpulse = 5000
-
-	showResizes           = false
-	maxHoldCount          = 20
-	magicButtonSideLength = 100
+	minVelocity                = 0.2
+	showResizes                = false
+	maxHoldCount               = 20
+	magicButtonSideLength      = 100
 )
 
 type Interpreter struct {
@@ -317,6 +317,12 @@ func (ub *Interpreter) throwBalls(discardPile []discardable) {
 		count++
 		b := ub.balls[i]
 		ub.balls = append(ub.balls[:i], ub.balls[i+1:]...)
+		if math.Abs(float64(b.GetVel().X)) < minVelocity {
+			b.SetVel(2*minVelocity, b.GetVel().Y)
+		}
+		if math.Abs(float64(b.GetVel().Y)) < minVelocity {
+			b.SetVel(b.GetVel().X, 2*minVelocity)
+		}
 		ub.throwOneBall(b, discard.d)
 	}
 }
@@ -403,11 +409,9 @@ func (ub *Interpreter) resetImpulseLimit() {
 	ub.maxDistSqForImpulse = max * max
 }
 
+// Find the ball closest to the impulse and within a reasonable
+// range, apply new velocity to the ball.
 func (ub *Interpreter) applyImpulse(impulse *model.Ball) {
-	// Find the ball closest to the impulse and
-	// within a reasonable range,
-	// apply new velocity to the ball.
-	// For now, just pick the zero ball.
 	if ub.chatty {
 		log.Printf("Got impulse: %s", impulse.String())
 	}
