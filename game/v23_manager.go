@@ -17,7 +17,7 @@ import (
 	"github.com/monopole/croupier/config"
 	"github.com/monopole/croupier/ifc"
 	"github.com/monopole/croupier/model"
-	"github.com/monopole/croupier/service"
+	"github.com/monopole/croupier/relay"
 	"log"
 	"net/http"
 	"sort"
@@ -46,7 +46,7 @@ type V23Manager struct {
 	rootName             string
 	namespaceRoot        string
 	rpcOpts              rpc.CallOpt
-	relay                *service.Relay
+	relay                *relay.Relay
 	myself               *model.Player
 	players              []*vPlayer
 	initialPlayerNumbers []int
@@ -122,7 +122,7 @@ func (gm *V23Manager) IsReadyToRun() bool {
 		log.Printf("I am %v\n", gm.myself)
 	}
 
-	gm.relay = service.MakeRelay()
+	gm.relay = relay.MakeRelay()
 
 	s := MakeServer(gm.ctx)
 	myName := gm.serverName(gm.Me().Id())
@@ -132,7 +132,7 @@ func (gm *V23Manager) IsReadyToRun() bool {
 
 	err := s.Serve(myName, ifc.GameBuddyServer(gm.relay), MakeAuthorizer())
 	if err != nil {
-		log.Panic("Error serving service: ", err)
+		log.Panic("Error serving relay: ", err)
 		return false
 	}
 	return true

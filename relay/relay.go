@@ -3,7 +3,7 @@
 // block the network thread) on receive-only channels.
 // Dumbness avoids the need v23-dependencies in tests.
 
-package service
+package relay
 
 import (
 	"github.com/monopole/croupier/config"
