@@ -14,10 +14,12 @@ package game
 
 import (
 	"fmt"
+	"github.com/monopole/croupier/config"
 	"github.com/monopole/croupier/ifc"
 	"github.com/monopole/croupier/model"
 	"github.com/monopole/croupier/service"
 	"log"
+	"net/http"
 	"sort"
 	"strconv"
 	"time"
@@ -49,7 +51,8 @@ type V23Manager struct {
 	players              []*vPlayer
 	initialPlayerNumbers []int
 	chBallCommand        <-chan model.BallCommand // Not owned, read from.
-	chQuit               chan chan bool           // Owned, read from.
+	chStop               chan chan bool           // Owned, read from.
+	chNoNewBallsOrPeople chan chan bool           // Owned, read from.
 	chDoorCommand        chan model.DoorCommand   // Owned, written to.
 }
 
@@ -72,13 +75,27 @@ func NewV23Manager(
 		[]*vPlayer{},
 		nil,                  // initialPlayerNumbers
 		nil,                  // chBallCommands
-		make(chan chan bool), // quit
+		make(chan chan bool), // chStop
+		make(chan chan bool), // chNoNewBallsOrPeople
 		make(chan model.DoorCommand),
 	}
 }
 
+func gotNetwork() bool {
+	_, err := http.Get(config.TestDomain)
+	if err == nil {
+		log.Printf("Network up - able to hit %s", config.TestDomain)
+		return true
+	}
+	log.Printf("Something wrong with network: %v", err)
+	return false
+}
+
 // Return true if ready to call Run
 func (gm *V23Manager) IsReadyToRun() bool {
+	if config.FailFast && !gotNetwork() {
+		return false
+	}
 	if gm.chatty {
 		log.Printf("Calling v23.Init")
 	}
@@ -378,7 +395,7 @@ func (gm *V23Manager) playerNumbers() (list []int) {
 		return
 	}
 	if gm.chatty {
-		log.Printf("Done with Glob request; awaiting channel.")
+		log.Printf("Awaiting response from Glob request.")
 	}
 	for res := range c {
 		if gm.chatty {
@@ -427,10 +444,13 @@ func (gm *V23Manager) Run(cbc <-chan model.BallCommand) {
 	}
 	for {
 		select {
-		case ch := <-gm.chQuit:
-			gm.quit()
+		case ch := <-gm.chStop:
+			gm.stop()
 			ch <- true
 			return
+		case ch := <-gm.chNoNewBallsOrPeople:
+			gm.noNewBallsOrPeople()
+			ch <- true
 		case bc := <-gm.chBallCommand:
 			gm.throwBall(bc)
 		case p := <-gm.relay.ChRecognize():
@@ -479,24 +499,38 @@ func serializeBall(b *model.Ball) ifc.Ball {
 		wp, b.GetPos().X, b.GetPos().Y, b.GetVel().X, b.GetVel().Y}
 }
 
-func (gm *V23Manager) Quit() {
+func (gm *V23Manager) NoNewBallsOrPeople() {
 	ch := make(chan bool)
-	gm.chQuit <- ch
+	gm.chNoNewBallsOrPeople <- ch
 	<-ch
 }
 
-func (gm *V23Manager) quit() {
-	gm.sayGoodbyeToEveryone()
+func (gm *V23Manager) noNewBallsOrPeople() {
 	if gm.chatty {
-		log.Println("Shutting down v23 runtime.")
+		log.Println("********************* No New Balls or people.")
 	}
-	gm.relay.Close()
+	gm.relay.StopAcceptingPlayers()
+	gm.sayGoodbyeToEveryone()
+	gm.relay.StopAcceptingBalls()
+}
+
+func (gm *V23Manager) Stop() {
+	ch := make(chan bool)
+	gm.chStop <- ch
+	<-ch
+}
+
+func (gm *V23Manager) stop() {
 	if gm.chatty {
-		log.Println("Relay closed.")
+		log.Println("v23 calling native shutdown.")
 	}
 	gm.shutdown()
+	gm.relay.Stop()
+	if gm.chatty {
+		log.Println("v23: closing door command channel.")
+	}
+	close(gm.chDoorCommand)
 	if gm.chatty {
 		log.Println("v23 runtime done.")
 	}
-	close(gm.chDoorCommand)
 }

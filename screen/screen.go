@@ -49,6 +49,14 @@ var playerColors = []Color{
 	Color{214, 45, 32},   // google red
 	Color{255, 167, 0},   // google orange
 	Color{0, 135, 68},    // google green
+	Color{255, 0, 255},   // magenta
+	Color{0, 255, 255},   // cyan
+	Color{218, 165, 32},  // gold
+	Color{0, 100, 0},     // dark green
+	Color{255, 255, 0},   // bright yellow
+	Color{0, 0, 255},     // bright blue
+	Color{255, 0, 0},     // bright red
+	Color{140, 140, 140}, // gray
 }
 
 type Screen struct {

@@ -2,7 +2,6 @@ package interpreter
 
 import (
 	"fmt"
-	"github.com/monopole/croupier/config"
 	"github.com/monopole/croupier/game"
 	"github.com/monopole/croupier/model"
 	"github.com/monopole/croupier/screen"
@@ -14,7 +13,6 @@ import (
 	"golang.org/x/mobile/event/touch"
 	"log"
 	"math"
-	"net/http"
 )
 
 const (
@@ -24,6 +22,7 @@ const (
 	// Start with generous slop.
 	defaultMaxDistSqForImpulse = 5000
 
+	showResizes           = false
 	maxHoldCount          = 20
 	magicButtonSideLength = 100
 )
@@ -75,37 +74,41 @@ func (ub *Interpreter) String() string {
 	return fmt.Sprintf("%v %v", ub.gm.Me(), ub.balls)
 }
 
-func (ub *Interpreter) quit() {
+func (ub *Interpreter) start() {
+	if ub.chatty {
+		log.Printf("Interpreter starting.\n")
+	}
+	ub.makeFirstBall()
+	ub.scn.Start()
+	go ub.gm.Run(ub.chBallCommand)
+	ub.isAlive = true
+	if ub.chatty {
+		log.Printf("Interpreted started.\n")
+	}
+}
+
+func (ub *Interpreter) stop() {
 	if !ub.isAlive {
-		log.Println("Quit called on dead interpreter.")
+		log.Println("Stop called on dead interpreter.")
 		return
 	}
 	if ub.chatty {
-		log.Println("Interpreter quitting.")
+		log.Println("****************************** Interpreter stopping.")
 	}
+	ub.gm.NoNewBallsOrPeople()
 	ub.discardBalls()
-	// Closing this channel seems to trigger a ball?
-	// close(ub.chBallCommand)
+	// Closing this channel sends a nil, which has to be handled on the
+	// other side - so don't bother to close(ub.chBallCommand)
 	if ub.chatty {
 		log.Println("Sending shutdown to v23.")
 	}
 	// Wait for v23 manager to shutdown.
-	ub.gm.Quit()
+	ub.gm.Stop()
 	ub.scn.Stop()
 	ub.isAlive = false
 	if ub.chatty {
-		log.Println("Interpreter done.")
+		log.Println("Interpreter done!")
 	}
-}
-
-func gotNetwork() bool {
-	_, err := http.Get(config.TestDomain)
-	if err == nil {
-		log.Printf("Network up - able to hit %s", config.TestDomain)
-		return true
-	}
-	log.Printf("Something wrong with network: %v", err)
-	return false
 }
 
 func (ub *Interpreter) Run(a app.App) {
@@ -151,22 +154,11 @@ func (ub *Interpreter) Run(a app.App) {
 				switch e.Crosses(lifecycle.StageVisible) {
 				case lifecycle.CrossOn:
 					if !ub.isAlive {
-						if config.FailFast {
-							if !gotNetwork() {
-								return
-							}
-						}
 						// Calls v23.Init(), determines current players from MT, etc.
 						if !ub.gm.IsReadyToRun() {
 							return
 						}
-						if ub.chatty {
-							log.Printf("App starting!\n")
-						}
-						ub.makeFirstBall()
-						ub.scn.Start()
-						go ub.gm.Run(ub.chBallCommand)
-						ub.isAlive = true
+						ub.start()
 					}
 				case lifecycle.CrossOff:
 					if ub.chatty {
@@ -174,7 +166,7 @@ func (ub *Interpreter) Run(a app.App) {
 					}
 					// TODO(monopole): Perhaps there's a mode where the screen
 					// is stopped but the app keeps going?
-					ub.quit()
+					ub.stop()
 					return
 				}
 			case paint.Event:
@@ -190,10 +182,10 @@ func (ub *Interpreter) Run(a app.App) {
 				}
 				switch e.Code {
 				case key.CodeQ:
-					ub.quit()
+					ub.stop()
 					return
 				case key.CodeEscape:
-					ub.quit()
+					ub.stop()
 					return
 				}
 			case touch.Event:
@@ -209,7 +201,7 @@ func (ub *Interpreter) Run(a app.App) {
 						if ub.chatty {
 							log.Printf("Touched shutdown spot.\n")
 						}
-						ub.quit()
+						ub.stop()
 						return
 					}
 				case touch.TypeMove:
@@ -237,20 +229,19 @@ func (ub *Interpreter) Run(a app.App) {
 					holdCount = 0
 				}
 			case size.Event:
-				if ub.chatty {
+				if ub.chatty && showResizes {
 					log.Println("ReSize event")
 				}
 				sz = e
 				ub.scn.ReSize(float32(sz.WidthPx), float32(sz.HeightPx))
 				ub.resetImpulseLimit()
-				if ub.chatty {
+				if ub.chatty && showResizes {
 					log.Printf(
 						"New w=%.2f, new h=%.2f, maxDsqImpulse = %f.2",
 						ub.scn.Width(),
 						ub.scn.Height(),
 						ub.maxDistSqForImpulse)
 				}
-
 			}
 		}
 	}
@@ -267,8 +258,7 @@ func (ub *Interpreter) Run(a app.App) {
 // The width and height come in as integers - but they
 // seem to be in the same units (pixels).
 func (ub *Interpreter) moveBalls() {
-	throwLeft := []int{}
-	throwRight := []int{}
+	discardPile := []discardable{}
 	for i, b := range ub.balls {
 		dx := b.GetVel().X
 		dy := b.GetVel().Y
@@ -281,7 +271,7 @@ func (ub *Interpreter) moveBalls() {
 			// Ball hit left side of screen.
 			if ub.leftDoor == model.Open {
 				nx = 1
-				throwLeft = append(throwLeft, i)
+				discardPile = append(discardPile, discardable{i, model.Left})
 			} else {
 				nx = 0
 				dx = -dx
@@ -290,7 +280,7 @@ func (ub *Interpreter) moveBalls() {
 			// Ball hit right side of screen.
 			if ub.rightDoor == model.Open {
 				nx = 0
-				throwRight = append(throwRight, i)
+				discardPile = append(discardPile, discardable{i, model.Right})
 			} else {
 				nx = ub.scn.Width()
 				dx = -dx
@@ -308,30 +298,26 @@ func (ub *Interpreter) moveBalls() {
 		b.SetPos(nx, ny)
 		b.SetVel(dx, dy)
 	}
-	ub.throwBalls(throwLeft, throwRight)
+	if ub.chatty {
+		if len(discardPile) > 0 {
+			log.Printf("%d balls need to move off screen.", len(discardPile))
+		}
+	}
+	ub.throwBalls(discardPile)
 }
 
-func (ub *Interpreter) throwBalls(throwLeft, throwRight []int) {
+func (ub *Interpreter) throwBalls(discardPile []discardable) {
 	count := 0
-	for _, k := range throwLeft {
-		i := k - count
+	for _, discard := range discardPile {
+		i := discard.i - count
 		if ub.chatty {
-			log.Printf("Throwing ball left (i=%d, k=%d, count=%d).\n", i, k, count)
+			log.Printf("Throwing ball %v (i=%d, k=%d, count=%d).\n",
+				discard.d, i, discard.i, count)
 		}
 		count++
 		b := ub.balls[i]
 		ub.balls = append(ub.balls[:i], ub.balls[i+1:]...)
-		ub.throwOneBall(b, model.Left)
-	}
-	for _, k := range throwRight {
-		i := k - count
-		if ub.chatty {
-			log.Printf("Throwing ball right (i=%d, k=%d, count=%d).\n", i, k, count)
-		}
-		count++
-		b := ub.balls[i]
-		ub.balls = append(ub.balls[:i], ub.balls[i+1:]...)
-		ub.throwOneBall(b, model.Right)
+		ub.throwOneBall(b, discard.d)
 	}
 }
 
@@ -344,40 +330,50 @@ func (ub *Interpreter) throwOneBall(b *model.Ball, direction model.Direction) {
 	ub.chBallCommand <- model.BallCommand{b, direction}
 }
 
+type discardable struct {
+	i int
+	d model.Direction
+}
+
 func (ub *Interpreter) discardBalls() {
 	if ub.leftDoor == model.Closed && ub.rightDoor == model.Closed {
 		// Nowhere to discard balls.
 		return
 	}
-	throwLeft := []int{}
-	throwRight := []int{}
+	discardPile := []discardable{}
 	for i, b := range ub.balls {
 		nx := b.GetPos().X
 		if b.GetVel().X <= 0 {
 			if ub.leftDoor == model.Open {
-				throwLeft = append(throwLeft, i)
+				discardPile = append(discardPile, discardable{i, model.Left})
 				// Ball should appear on right side of ub it flies to.
 				nx = ub.scn.Width()
 			} else {
 				if ub.rightDoor == model.Open {
-					throwRight = append(throwRight, i)
+					discardPile = append(discardPile, discardable{i, model.Right})
 					nx = 0
 				}
 			}
 		} else {
 			if ub.rightDoor == model.Open {
-				throwRight = append(throwRight, i)
+				discardPile = append(discardPile, discardable{i, model.Right})
 				nx = 0
 			} else {
 				if ub.leftDoor == model.Open {
-					throwLeft = append(throwLeft, i)
+					discardPile = append(discardPile, discardable{i, model.Left})
 					nx = ub.scn.Width()
 				}
 			}
 		}
 		b.SetPos(nx, b.GetPos().Y)
 	}
-	ub.throwBalls(throwLeft, throwRight)
+
+	if ub.chatty {
+		if len(discardPile) > 0 {
+			log.Printf("%d balls to discard.", len(discardPile))
+		}
+	}
+	ub.throwBalls(discardPile)
 }
 
 func (ub *Interpreter) makeFirstBall() {
