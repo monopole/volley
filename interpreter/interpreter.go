@@ -22,7 +22,7 @@ const (
 	// Start with generous slop.
 	defaultMaxDistSqForImpulse = 5000
 	minVelocity                = 0.2
-	showResizes                = false
+	showResizes                = true
 	maxHoldCount               = 20
 	magicButtonSideLength      = 100
 )
@@ -31,6 +31,8 @@ type Interpreter struct {
 	isAlive             bool
 	maxDistSqForImpulse float32
 	isGravity           bool
+	numBallsCreated     int
+	firstResizeDone     bool
 	gm                  *game.V23Manager
 	scn                 *screen.Screen
 	chatty              bool
@@ -59,6 +61,8 @@ func NewInterpreter(
 		false, // isAlive
 		defaultMaxDistSqForImpulse,
 		false, // isGravity
+		0,     // numBallsCreated
+		false, // firstResizeDone
 		gm,
 		scn,
 		chatty,
@@ -78,12 +82,18 @@ func (ub *Interpreter) start() {
 	if ub.chatty {
 		log.Printf("Interpreter starting.\n")
 	}
-	ub.makeFirstBall()
 	ub.scn.Start()
-	go ub.gm.Run(ub.chBallCommand)
+
+	ub.gm.RunPrep(ub.chBallCommand)
+	go ub.gm.Run()
+
+	if ub.firstResizeDone && ub.numBallsCreated < 1 {
+		ub.createBall()
+	}
+
 	ub.isAlive = true
 	if ub.chatty {
-		log.Printf("Interpreted started.\n")
+		log.Printf("Interpreter started.\n")
 	}
 }
 
@@ -113,7 +123,7 @@ func (ub *Interpreter) stop() {
 
 func (ub *Interpreter) Run(a app.App) {
 	if ub.chatty {
-		log.Println("Starting interpreter.")
+		log.Println("Starting interpreter Run.")
 	}
 	holdCount := 0
 	var sz size.Event
@@ -121,7 +131,7 @@ func (ub *Interpreter) Run(a app.App) {
 		select {
 		case b := <-ub.gm.ChIncomingBall():
 			if ub.chatty {
-				log.Println("Interpreter ball.")
+				log.Println("Caught ball in interpreter.")
 			}
 			nx := b.GetPos().X
 			if nx <= 0.1 {
@@ -229,18 +239,25 @@ func (ub *Interpreter) Run(a app.App) {
 					holdCount = 0
 				}
 			case size.Event:
-				if ub.chatty && showResizes {
-					log.Println("ReSize event")
-				}
+				// TODO: Adjust velocity on resizes - balls should take the
+				// same amount of time to traverse the screen regardless of
+				// the size.
 				sz = e
 				ub.scn.ReSize(float32(sz.WidthPx), float32(sz.HeightPx))
 				ub.resetImpulseLimit()
 				if ub.chatty && showResizes {
 					log.Printf(
-						"New w=%.2f, new h=%.2f, maxDsqImpulse = %f.2",
+						"Resize new w=%.2f, new h=%.2f, maxDsqImpulse = %f.2",
 						ub.scn.Width(),
 						ub.scn.Height(),
 						ub.maxDistSqForImpulse)
+				}
+				if !ub.firstResizeDone {
+					ub.firstResizeDone = true
+					// Don't place the first ball till size is known.
+					if ub.numBallsCreated < 1 && ub.gm.IsRunning() {
+						ub.createBall()
+					}
 				}
 			}
 		}
@@ -382,12 +399,9 @@ func (ub *Interpreter) discardBalls() {
 	ub.throwBalls(discardPile)
 }
 
-func (ub *Interpreter) makeFirstBall() {
+func (ub *Interpreter) createBall() {
 	if ub.chatty {
-		log.Printf("Making the first ball.")
-	}
-	if len(ub.balls) > 0 {
-		log.Panic("There should be zero balls now.")
+		log.Printf("Creating ball.")
 	}
 	ub.balls = append(
 		ub.balls,
@@ -395,6 +409,10 @@ func (ub *Interpreter) makeFirstBall() {
 			ub.gm.Me(),
 			model.Vec{ub.scn.Width() / 2, ub.scn.Height() / 2},
 			model.Vec{0, 0}))
+	// Since balls can come in from the outside,  len(ub.balls) is
+	// not a reliable indicated of how many balls this thread created,
+	// so need a distinct counter.
+	ub.numBallsCreated++
 }
 
 // Use fraction of characteristic screen size

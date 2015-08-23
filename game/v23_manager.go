@@ -91,6 +91,10 @@ func gotNetwork() bool {
 	return false
 }
 
+func (gm *V23Manager) IsRunning() bool {
+	return gm.isRunning
+}
+
 // Return true if ready to call Run
 func (gm *V23Manager) IsReadyToRun() bool {
 	if config.FailFast && !gotNetwork() {
@@ -428,20 +432,23 @@ func (gm *V23Manager) playerNumbers() (list []int) {
 	return
 }
 
-func (gm *V23Manager) Run(cbc <-chan model.BallCommand) {
+func (gm *V23Manager) RunPrep(chBc <-chan model.BallCommand) {
 	if gm.chatty {
 		log.Println("Final prep of V23Manager.")
 	}
-	gm.chBallCommand = cbc
+	gm.chBallCommand = chBc
 	for _, id := range gm.initialPlayerNumbers {
 		gm.recognizeOther(model.NewPlayer(id))
 	}
 	gm.sayHelloToEveryone()
 	gm.isRunning = true
-	gm.checkDoors()
+}
+
+func (gm *V23Manager) Run() {
 	if gm.chatty {
 		log.Println("Starting V23Manager run loop.")
 	}
+	gm.checkDoors()
 	for {
 		select {
 		case ch := <-gm.chStop:
@@ -486,11 +493,15 @@ func (gm *V23Manager) throwBall(bc model.BallCommand) {
 
 func (gm *V23Manager) sendBallRpc(bc model.BallCommand, vp *vPlayer) {
 	wb := serializeBall(bc.B)
-	log.Printf("RPC sending: throwing ball %v to %v : %v\n", bc.D, vp.p, vp.c)
+	if gm.chatty {
+		log.Printf("RPC sending: throwing ball %v to %v : %v\n", bc.D, vp.p, vp.c)
+	}
 	if err := vp.c.Accept(gm.ctx, wb, gm.rpcOpts); err != nil {
 		log.Panic("Ball throw %v failed; err=%v", bc.D, err)
 	}
-	log.Printf("Ball throw %v RPC done.", bc.D)
+	if gm.chatty {
+		log.Printf("Ball throw %v RPC done.", bc.D)
+	}
 }
 
 func serializeBall(b *model.Ball) ifc.Ball {

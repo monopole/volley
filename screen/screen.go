@@ -110,7 +110,7 @@ func (s *Screen) Start() {
 	var err error
 	s.program, err = glutil.CreateProgram(vertexShader, fragmentShader)
 	if err != nil {
-		log.Printf("Error creating GL program: %v", err)
+		log.Printf("Error in screen.Start: %v", err)
 		return
 	}
 	s.position = gl.GetAttribLocation(s.program, "jrPosition")
@@ -145,7 +145,6 @@ func (s *Screen) Paint(balls []*model.Ball) {
 
 	gl.EnableVertexAttribArray(s.position)
 	gl.VertexAttribPointer(s.position, coordsPerVertex, gl.FLOAT, false, 0, 0)
-
 	for _, b := range balls {
 		c := playerColors[b.Owner().Id()%len(playerColors)]
 		gl.Uniform4f(s.color, c.R, c.G, c.B, opaque)
