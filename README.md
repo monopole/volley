@@ -1,5 +1,7 @@
 # volley
-An exploration of Go + GL + mobile + v23
+Go + mobile + GL + [http://v.io](https://v.io)
+
+See [demo video](https://youtu.be/o3VHfjlpnJg).
 
 ## Install prerequisites
 
