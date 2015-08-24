@@ -1,11 +1,14 @@
 # volley
-Go + mobile + GL + [http://v.io](https://v.io)
+Go + mobile + GL + [v23](https://v.io)
 
-See [demo video](https://youtu.be/o3VHfjlpnJg).
+[Demo video](https://youtu.be/o3VHfjlpnJg).
+
+To try v23, sign up [here](https://goo.gl/ETo8Mt).
 
 ## Install prerequisites
 
-For bootstrapping, prefer a clean environment.
+Define a clean env to make the rest of the procedures described here
+more likely to work.
 
 ```
 unset GOROOT
@@ -58,27 +61,25 @@ adb version
 
 #### Become an app developer 
 
+* Become an [Apple app developer](https://developer.apple.com/programs) (get an apple ID, device auth, etc.)
 * Install XCode, perhaps: `xcode-select --install`
 * Get [git](http://git-scm.com/download/mac).
-* Get provisioned to become an ios app developer (apple ID, etc.)
 
 #### install [ios-deploy](https://github.com/phonegap/ios-deploy)
 
-Maybe:
 ```
-ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+brewUrl=https://raw.githubusercontent.com/Homebrew/install/master/install
+ruby -e "$(curl -fsSL $brewUrl)"
 brew install node
 npm install -g ios-deploy
 make install prefix=/usr/local
 ios-deploy
 ```
 
-
-
 ### Install Go 1.5
 
 
-#### Install
+#### Get binaries
 
 Full instructions [here](https://golang.org/doc/install).
 On a 64-bit linux box, just try this:
@@ -118,6 +119,8 @@ export GOPATH=$BERRY
 ```
 
 ## Install v23 as an end-user
+
+To try v23, sign up [here](https://goo.gl/ETo8Mt).
 
 Full instructions [here](https://v.io/installation/details.html), or try this:
 

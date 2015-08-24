@@ -16,15 +16,21 @@ import (
 )
 
 const (
-	// Arbitrary - depends on paint event timing.
-	timeStep = 10
-
 	// Start with generous slop.
 	defaultMaxDistSqForImpulse = 5000
-	minVelocity                = 0.2
-	showResizes                = true
-	maxHoldCount               = 20
-	magicButtonSideLength      = 100
+
+	debugShowResizes      = true
+	maxHoldCount          = 20
+	magicButtonSideLength = 100
+
+	// Arbitrary statement that this many time units
+	// passed between each paint event.
+	// Making this number smaller makes balls move faster.
+	timeStep = 100
+
+	// Window height and width are provided in "pixels".
+	// Velocity == "pixels traversed per timeStep".
+	minVelocity = 20 / timeStep
 )
 
 type Interpreter struct {
@@ -41,6 +47,8 @@ type Interpreter struct {
 	touchY              float32
 	beginX              float32
 	beginY              float32
+	velocityX           float32
+	velocityY           float32
 	leftDoor            model.DoorState
 	rightDoor           model.DoorState
 	chBallCommand       chan model.BallCommand // Owned, written to.
@@ -67,7 +75,7 @@ func NewInterpreter(
 		scn,
 		chatty,
 		[]*model.Ball{},
-		0, 0, 0, 0,
+		0, 0, 0, 0, minVelocity, minVelocity,
 		model.Closed, // left door
 		model.Closed, // right door
 		make(chan model.BallCommand),
@@ -229,6 +237,7 @@ func (ub *Interpreter) Run(a app.App) {
 							// They should drag for around 10 pixels.
 							b := model.NewBall(nil,
 								model.Vec{ub.beginX, ub.beginY},
+								// Every ball has |velocity|==1 at the moment.
 								model.Vec{float32(dx / mag), float32(dy / mag)})
 							if ub.chatty {
 								log.Printf("Sending impulse: %s", b.String())
@@ -244,8 +253,10 @@ func (ub *Interpreter) Run(a app.App) {
 				// the size.
 				sz = e
 				ub.scn.ReSize(float32(sz.WidthPx), float32(sz.HeightPx))
+				ub.velocityX = ub.scn.Width() / timeStep
+				ub.velocityY = ub.scn.Height() / timeStep
 				ub.resetImpulseLimit()
-				if ub.chatty && showResizes {
+				if ub.chatty && debugShowResizes {
 					log.Printf(
 						"Resize new w=%.2f, new h=%.2f, maxDsqImpulse = %f.2",
 						ub.scn.Width(),
@@ -282,8 +293,8 @@ func (ub *Interpreter) moveBalls() {
 		if ub.isGravity {
 			// TODO
 		}
-		nx := b.GetPos().X + timeStep*dx
-		ny := b.GetPos().Y + timeStep*dy
+		nx := b.GetPos().X + ub.velocityX*dx
+		ny := b.GetPos().Y + ub.velocityY*dy
 		if nx <= 0 {
 			// Ball hit left side of screen.
 			if ub.leftDoor == model.Open {
