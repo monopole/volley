@@ -322,15 +322,6 @@ func (ub *Interpreter) throwBalls(discardPile []discardable) {
 		count++
 		b := ub.balls[i]
 		ub.balls = append(ub.balls[:i], ub.balls[i+1:]...)
-		vx := b.GetVel().X
-		vy := b.GetVel().Y
-		if math.Abs(float64(vx)) < minVelocity {
-			vx = minVelocity
-		}
-		if math.Abs(float64(vy)) < minVelocity {
-			vy = minVelocity
-		}
-		b.SetVel(vx, vy)
 		ub.throwOneBall(b, discard.d)
 	}
 }
@@ -356,30 +347,54 @@ func (ub *Interpreter) discardBalls() {
 	}
 	discardPile := []discardable{}
 	for i, b := range ub.balls {
+		vx := b.GetVel().X
+		vy := b.GetVel().Y
 		nx := b.GetPos().X
-		if b.GetVel().X <= 0 {
+		if vx < 0 {
+			// Ball moving left.
 			if ub.leftDoor == model.Open {
 				discardPile = append(discardPile, discardable{i, model.Left})
-				// Ball should appear on right side of ub it flies to.
+				// Ball should appear on right side of place it flies to.
 				nx = ub.scn.Width()
+				if -vx < minVelocity {
+					vx = -minVelocity
+				}
 			} else {
 				if ub.rightDoor == model.Open {
 					discardPile = append(discardPile, discardable{i, model.Right})
 					nx = 0
+					if -vx < minVelocity {
+						vx = -minVelocity
+					} else {
+						vx = -vx
+					}
 				}
 			}
 		} else {
+			// Ball moving right or not moving.
 			if ub.rightDoor == model.Open {
 				discardPile = append(discardPile, discardable{i, model.Right})
 				nx = 0
+				if vx < minVelocity {
+					vx = minVelocity
+				}
 			} else {
 				if ub.leftDoor == model.Open {
 					discardPile = append(discardPile, discardable{i, model.Left})
 					nx = ub.scn.Width()
 				}
+				if vx < minVelocity {
+					vx = -minVelocity
+				} else {
+					vx = -vx
+				}
 			}
 		}
+		if math.Abs(float64(vy)) < minVelocity {
+			vy = minVelocity
+		}
 		b.SetPos(nx, b.GetPos().Y)
+		b.SetVel(vx, vy)
 	}
 
 	if ub.chatty {
