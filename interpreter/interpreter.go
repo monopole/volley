@@ -18,16 +18,14 @@ import (
 const (
 	// Start with generous slop.
 	defaultMaxDistSqForImpulse = 5000
-
-	debugShowResizes      = true
-	maxHoldCount          = 20
-	magicButtonSideLength = 100
-
-	// Arbitrary statement that this many time units
-	// passed between each paint event.
-	// Making this number smaller makes balls move faster.
+	debugShowResizes           = false
+	maxHoldCount               = 20
+	magicButtonSideLength      = 100
+	fuzzyZero                  = 0.1
+	minDragLength              = 10
+	// Arbitrary statement that this many time units passed between each
+	// paint event.  Making this number smaller makes balls move faster.
 	timeStep = 100
-
 	// Window height and width are provided in "pixels".
 	// Velocity == "pixels traversed per timeStep".
 	minVelocity = 20 / timeStep
@@ -138,37 +136,24 @@ func (ub *Interpreter) Run(a app.App) {
 	for {
 		select {
 		case b := <-ub.gm.ChIncomingBall():
-			if ub.chatty {
-				log.Println("Caught ball in interpreter.")
-			}
 			nx := b.GetPos().X
-			if nx <= 0.1 {
-				// Fuzzy zero means ball came in from left.
+			if nx <= fuzzyZero {
+				// Ball came in from left.
 				nx = 0
 			} else {
 				// Ball came in from right.
 				nx = ub.scn.Width()
 			}
-			// Assume Y component normalized before the throw.
+			// Assume Y component normalized before teleport.
 			ny := b.GetPos().Y * ub.scn.Height()
-			// Leave the velocity alone for now, although that
-			// looks odd when jumping from a small screen to a large screen.
 			b.SetPos(nx, ny)
-			if ub.chatty {
-				log.Printf("Table accepting ball %s", b)
-			}
+			// TODO: Adjust velocity per refraction-like rules?
 			ub.balls = append(ub.balls, b)
 		case dc := <-ub.gm.ChDoorCommand():
-			if ub.chatty {
-				log.Println("Interpreter received door command.")
-			}
 			ub.handleDoor(dc)
 		case event := <-a.Events():
 			switch e := app.Filter(event).(type) {
 			case lifecycle.Event:
-				if ub.chatty {
-					log.Println("Lifecycle event")
-				}
 				switch e.Crosses(lifecycle.StageVisible) {
 				case lifecycle.CrossOn:
 					if !ub.isAlive {
@@ -179,11 +164,6 @@ func (ub *Interpreter) Run(a app.App) {
 						ub.start()
 					}
 				case lifecycle.CrossOff:
-					if ub.chatty {
-						log.Printf("App stopping!\n")
-					}
-					// TODO(monopole): Perhaps there's a mode where the screen
-					// is stopped but the app keeps going?
 					ub.stop()
 					return
 				}
@@ -224,20 +204,17 @@ func (ub *Interpreter) Run(a app.App) {
 					}
 				case touch.TypeMove:
 					holdCount++
-					if ub.chatty {
-						// log.Printf("Touch Moving.\n")
-					}
 				case touch.TypeEnd:
 					if holdCount > 0 && holdCount <= maxHoldCount {
 						// If they hold on too long, ignore it.
 						dx := float64(e.X - ub.beginX)
 						dy := float64(e.Y - ub.beginY)
 						mag := math.Sqrt(dx*dx + dy*dy)
-						if mag > 10 {
-							// They should drag for around 10 pixels.
+						if mag >= minDragLength {
 							b := model.NewBall(nil,
 								model.Vec{ub.beginX, ub.beginY},
-								// Every ball has |velocity|==1 at the moment.
+								// Ball velocities differ only in direction
+								// at the moment.
 								model.Vec{float32(dx / mag), float32(dy / mag)})
 							if ub.chatty {
 								log.Printf("Sending impulse: %s", b.String())
