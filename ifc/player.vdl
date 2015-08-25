@@ -23,4 +23,10 @@ type GameBuddy interface {
 
   // Accept a ball.
   Accept(b Ball) error
+
+  // Quit.
+  Quit() error
+
+  // Kick everything.
+  Kick() error
 }

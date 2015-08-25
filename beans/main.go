@@ -1,57 +1,45 @@
 package main
 
 import (
+	"fmt"
 	"github.com/monopole/croupier/config"
 	"github.com/monopole/croupier/game"
-	"github.com/monopole/croupier/table"
 	"log"
-	"time"
+	"os"
+	"strconv"
 )
 
 func main() {
+	fmt.Println(os.Args)
+	if len(os.Args) < 1 {
+		return
+	}
+
 	gm := game.NewV23Manager(
 		config.Chatty, config.RootName, config.NamespaceRoot)
-	gm.Initialize()
-
-	if config.Chatty {
-		log.Println("Making the table.")
-	}
-	table := table.NewTable(
-		config.Chatty,
-		gm.Me(),
-		nil, // screen.NewScreen(),
-		gm.ChIncomingBall(),
-		gm.ChDoorCommand(),
-		gm.ChQuit(),
-	)
-
-	if config.Chatty {
-		log.Println("Firing table")
-	}
-	go table.Run()
-
-	if config.Chatty {
-		log.Println("Firing v23")
-	}
-	go gm.Run(table.ChBallCommand())
-
-	delta := 5
-	timeStep := time.Duration(delta) * time.Second
-	for i := 4; i > 0; i-- {
+	if !gm.IsReadyToRun(true) {
 		if config.Chatty {
-			log.Printf("%d seconds left...\n", i*delta)
+			log.Printf("gm not ready!")
 		}
-		<-time.After(timeStep)
+		return
 	}
+	gm.RunPrep(nil)
 
-	if config.Chatty {
-		log.Println("Sending quit.")
+	if os.Args[1] == "list" {
+		log.Printf("listing!")
+		gm.List()
+		return
 	}
-	ch := make(chan bool)
-	table.ChQuit() <- ch
-	<-ch
-
-	if config.Chatty {
-		log.Println("All done.")
+	if os.Args[1] == "kick" {
+		log.Printf("kicking!")
+		gm.Kick()
+		return
 	}
+	if os.Args[1] == "quit" {
+		id, _ := strconv.Atoi(os.Args[2])
+		log.Printf("quitting %d", id)
+		gm.Quit(id)
+		return
+	}
+	log.Printf("Don't understand: %s\n", os.Args[1])
 }

@@ -18,6 +18,8 @@ type Relay struct {
 	chRecognize   chan *model.Player
 	chForget      chan *model.Player
 	chBall        chan *model.Ball
+	chQuit        chan bool
+	chKick        chan bool
 	acceptingData bool
 	mu            sync.RWMutex
 }
@@ -27,6 +29,8 @@ func MakeRelay() *Relay {
 	r.chRecognize = make(chan *model.Player)
 	r.chForget = make(chan *model.Player)
 	r.chBall = make(chan *model.Ball)
+	r.chQuit = make(chan bool)
+	r.chKick = make(chan bool)
 	r.acceptingData = true
 	if config.Chatty {
 		log.Printf("Made Relay.")
@@ -64,6 +68,56 @@ func (r *Relay) ChForget() <-chan *model.Player {
 
 func (r *Relay) ChIncomingBall() <-chan *model.Ball {
 	return r.chBall
+}
+
+func (r *Relay) ChQuit() <-chan bool {
+	return r.chQuit
+}
+
+func (r *Relay) ChKick() <-chan bool {
+	return r.chKick
+}
+
+func (r *Relay) Kick(_ *context.T, _ rpc.ServerCall) error {
+	go func() {
+		r.mu.Lock()
+		defer r.mu.Unlock()
+		if r.acceptingData {
+			if config.Chatty {
+				log.Printf("Relay: Got a kick!.")
+			}
+			r.chKick <- true
+			if config.Chatty {
+				log.Printf("Relay: Passed kick to ch.")
+			}
+		} else {
+			if config.Chatty {
+				log.Printf("Relay: Discarding kick request.")
+			}
+		}
+	}()
+	return nil
+}
+
+func (r *Relay) Quit(_ *context.T, _ rpc.ServerCall) error {
+	go func() {
+		r.mu.Lock()
+		defer r.mu.Unlock()
+		if r.acceptingData {
+			if config.Chatty {
+				log.Printf("Relay: Got a quit!.")
+			}
+			r.chQuit <- true
+			if config.Chatty {
+				log.Printf("Relay: Passed quit to ch.")
+			}
+		} else {
+			if config.Chatty {
+				log.Printf("Relay: Discarding quit request.")
+			}
+		}
+	}()
+	return nil
 }
 
 func (r *Relay) Recognize(_ *context.T, _ rpc.ServerCall, p ifc.Player) error {

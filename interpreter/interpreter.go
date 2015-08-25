@@ -135,6 +135,11 @@ func (ub *Interpreter) Run(a app.App) {
 	var sz size.Event
 	for {
 		select {
+		case <-ub.gm.ChKick():
+			ub.kick()
+		case <-ub.gm.ChQuit():
+			ub.stop()
+			return
 		case b := <-ub.gm.ChIncomingBall():
 			nx := b.GetPos().X
 			if nx <= fuzzyZero {
@@ -158,7 +163,7 @@ func (ub *Interpreter) Run(a app.App) {
 				case lifecycle.CrossOn:
 					if !ub.isAlive {
 						// Calls v23.Init(), determines current players from MT, etc.
-						if !ub.gm.IsReadyToRun() {
+						if !ub.gm.IsReadyToRun(false) {
 							return
 						}
 						ub.start()
@@ -249,6 +254,15 @@ func (ub *Interpreter) Run(a app.App) {
 				}
 			}
 		}
+	}
+}
+
+func (ub *Interpreter) kick() {
+	if ub.chatty {
+		log.Print("Interpreter kicked.")
+	}
+	for _, b := range ub.balls {
+		b.SetVel(0, -0.8)
 	}
 }
 
@@ -423,7 +437,7 @@ func (ub *Interpreter) createBall() {
 			model.Vec{ub.scn.Width() / 2, ub.scn.Height() / 2},
 			model.Vec{0, 0}))
 	// Since balls can come in from the outside,  len(ub.balls) is
-	// not a reliable indicated of how many balls this thread created,
+	// not a reliable indicated of how many balls this code created,
 	// so need a distinct counter.
 	ub.numBallsCreated++
 }

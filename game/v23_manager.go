@@ -41,6 +41,7 @@ type V23Manager struct {
 	ctx                  *context.T
 	shutdown             v23.Shutdown
 	isRunning            bool
+	isGameMaster         bool
 	leftDoor             model.DoorState
 	rightDoor            model.DoorState
 	rootName             string
@@ -65,6 +66,7 @@ func NewV23Manager(
 		nil,          // ctx
 		nil,          // shutdown
 		false,        // isRunning
+		false,        // isGameMaster
 		model.Closed, // left door
 		model.Closed, // right door
 		rootName,
@@ -96,10 +98,11 @@ func (gm *V23Manager) IsRunning() bool {
 }
 
 // Return true if ready to call Run
-func (gm *V23Manager) IsReadyToRun() bool {
+func (gm *V23Manager) IsReadyToRun(isGameMaster bool) bool {
 	if config.FailFast && !gotNetwork() {
 		return false
 	}
+	gm.isGameMaster = isGameMaster
 	if gm.chatty {
 		log.Printf("Calling v23.Init")
 	}
@@ -121,12 +124,22 @@ func (gm *V23Manager) IsReadyToRun() bool {
 	if len(gm.initialPlayerNumbers) > 0 {
 		myId = gm.initialPlayerNumbers[len(gm.initialPlayerNumbers)-1] + 1
 	}
-	gm.myself = model.NewPlayer(myId)
-	if gm.chatty {
-		log.Printf("I am %v\n", gm.myself)
+
+	if gm.isGameMaster {
+		myId = 999
 	}
 
 	gm.relay = relay.MakeRelay()
+	gm.myself = model.NewPlayer(myId)
+	if gm.isGameMaster {
+		if gm.chatty {
+			log.Printf("I am game master.")
+		}
+		return true
+	}
+	if gm.chatty {
+		log.Printf("I am player %v\n", gm.myself)
+	}
 
 	s := MakeServer(gm.ctx)
 	myName := gm.serverName(gm.Me().Id())
@@ -146,11 +159,25 @@ func (gm *V23Manager) ChDoorCommand() <-chan model.DoorCommand {
 	return gm.chDoorCommand
 }
 
-func (gm *V23Manager) ChIncomingBall() <-chan *model.Ball {
-	if gm.relay != nil {
-		return gm.relay.ChIncomingBall()
+func (gm *V23Manager) ChKick() <-chan bool {
+	if gm.relay == nil {
+		return nil
 	}
-	return nil
+	return gm.relay.ChKick()
+}
+
+func (gm *V23Manager) ChIncomingBall() <-chan *model.Ball {
+	if gm.relay == nil {
+		return nil
+	}
+	return gm.relay.ChIncomingBall()
+}
+
+func (gm *V23Manager) ChQuit() <-chan bool {
+	if gm.relay == nil {
+		return nil
+	}
+	return gm.relay.ChQuit()
 }
 
 func (gm *V23Manager) Me() *model.Player {
@@ -440,7 +467,16 @@ func (gm *V23Manager) RunPrep(chBc <-chan model.BallCommand) {
 	for _, id := range gm.initialPlayerNumbers {
 		gm.recognizeOther(model.NewPlayer(id))
 	}
-	gm.sayHelloToEveryone()
+	if gm.chatty {
+		log.Printf("I see %d players.\n", len(gm.players))
+	}
+	if gm.isGameMaster {
+		if chBc != nil {
+			log.Panic("game master should not have chBc")
+		}
+	} else {
+		gm.sayHelloToEveryone()
+	}
 	gm.isRunning = true
 }
 
@@ -468,6 +504,37 @@ func (gm *V23Manager) Run() {
 	}
 }
 
+func (gm *V23Manager) Quit(id int) {
+	for _, vp := range gm.players {
+		if vp.p.Id() == id {
+			if gm.chatty {
+				log.Printf("Killing  %v", vp)
+			}
+			if err := vp.c.Quit(gm.ctx, gm.rpcOpts); err != nil {
+				log.Panic("Quit failed; err=%v", err)
+			}
+		}
+	}
+}
+
+func (gm *V23Manager) List() {
+	for _, vp := range gm.players {
+		log.Printf("%v", vp)
+	}
+}
+
+func (gm *V23Manager) Kick() {
+	for _, vp := range gm.players {
+		if gm.chatty {
+			log.Printf("Kicking  %v", vp)
+		}
+		if err := vp.c.Kick(gm.ctx, gm.rpcOpts); err != nil {
+			log.Panic("Kick failed; err=%v", err)
+		}
+	}
+}
+
+// Throw ball either left or right.
 func (gm *V23Manager) throwBall(bc model.BallCommand) {
 	if gm.chatty {
 		log.Printf("v23 manager got ball throw command: %v\n", bc)
