@@ -25,10 +25,10 @@ const (
 	minDragLength              = 10
 	// Arbitrary statement that this many time units passed between each
 	// paint event.  Making this number smaller makes balls move faster.
-	timeStep = 100
+	timeStep = 100.0
 	// Window height and width are provided in "pixels".
 	// Velocity == "pixels traversed per timeStep".
-	minVelocity = 20 / timeStep
+	minVelocity = 20.0 / timeStep
 )
 
 type Interpreter struct {
@@ -318,10 +318,12 @@ func (ub *Interpreter) throwBalls(discardPile []discardable) {
 		if ub.chatty {
 			log.Printf("Throwing ball %v (i=%d, k=%d, count=%d).\n",
 				discard.d, i, discard.i, count)
-			log.Printf("  ball = %v\n", discard)
 		}
 		count++
 		b := ub.balls[i]
+		if ub.chatty {
+			log.Printf("  ball = %v\n", b)
+		}
 		ub.balls = append(ub.balls[:i], ub.balls[i+1:]...)
 		ub.throwOneBall(b, discard.d)
 	}
@@ -352,7 +354,7 @@ func (ub *Interpreter) discardBalls() {
 		vy := b.GetVel().Y
 		nx := b.GetPos().X
 		if vx < 0 {
-			// Ball moving left.
+			// Try to discard to left.
 			if ub.leftDoor == model.Open {
 				discardPile = append(discardPile, discardable{i, model.Left})
 				// Ball should appear on right side of place it flies to.
@@ -364,15 +366,16 @@ func (ub *Interpreter) discardBalls() {
 				if ub.rightDoor == model.Open {
 					discardPile = append(discardPile, discardable{i, model.Right})
 					nx = 0
+					// Make ball go right.
 					if -vx < minVelocity {
-						vx = -minVelocity
+						vx = minVelocity
 					} else {
 						vx = -vx
 					}
 				}
 			}
 		} else {
-			// Ball moving right or not moving.
+			// vx non-negative, try to discard right.
 			if ub.rightDoor == model.Open {
 				discardPile = append(discardPile, discardable{i, model.Right})
 				nx = 0
@@ -384,6 +387,7 @@ func (ub *Interpreter) discardBalls() {
 					discardPile = append(discardPile, discardable{i, model.Left})
 					nx = ub.scn.Width()
 				}
+				// Make ball go left.
 				if vx < minVelocity {
 					vx = -minVelocity
 				} else {

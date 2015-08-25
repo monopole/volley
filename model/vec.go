@@ -10,5 +10,5 @@ type Vec struct {
 }
 
 func (v *Vec) String() string {
-	return fmt.Sprintf("{%.2f, %.2f}", v.X, v.Y)
+	return fmt.Sprintf("{%.4f, %.4f}", v.X, v.Y)
 }
