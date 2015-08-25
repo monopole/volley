@@ -104,6 +104,7 @@ func (ub *Interpreter) start() {
 }
 
 func (ub *Interpreter) stop() {
+	ub.scn.Clear()
 	if !ub.isAlive {
 		log.Println("Stop called on dead interpreter.")
 		return
@@ -120,7 +121,6 @@ func (ub *Interpreter) stop() {
 	}
 	// Wait for v23 manager to shutdown.
 	ub.gm.Stop()
-	ub.scn.Stop()
 	ub.isAlive = false
 	if ub.chatty {
 		log.Println("Interpreter done!")
@@ -396,7 +396,8 @@ func (ub *Interpreter) discardBalls() {
 			}
 		}
 		if math.Abs(float64(vy)) < minVelocity {
-			vy = minVelocity
+			// Kick it up.
+			vy = -minVelocity
 		}
 		b.SetPos(nx, b.GetPos().Y)
 		b.SetVel(vx, vy)
@@ -408,6 +409,7 @@ func (ub *Interpreter) discardBalls() {
 		}
 	}
 	ub.throwBalls(discardPile)
+	ub.balls = []*model.Ball{}
 }
 
 func (ub *Interpreter) createBall() {

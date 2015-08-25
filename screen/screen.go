@@ -127,9 +127,13 @@ func (s *Screen) Height() float32 {
 	return s.height
 }
 
-func (s *Screen) Paint(balls []*model.Ball) {
+func (s *Screen) Clear() {
 	gl.ClearColor(bgRed, bgGreen, bgBlue, opaque)
 	gl.Clear(gl.COLOR_BUFFER_BIT)
+}
+
+func (s *Screen) Paint(balls []*model.Ball) {
+	s.Clear()
 	gl.EnableVertexAttribArray(s.position)
 	gl.VertexAttribPointer(s.position, coordsPerVertex, gl.FLOAT, false, 0, 0)
 	for _, b := range balls {
