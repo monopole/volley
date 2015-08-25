@@ -134,9 +134,6 @@ go install v.io/x/ref/services/agent/...
 go install v.io/x/ref/services/mounttable/...
 ```
 
-Alternatively, try this [tarball](https://drive.google.com/a/google.com/file/d/0B_KAJdV1hyzkQndMLTBabUcxdGM/view).
-
-
 ## Install Go mobile stuff
 
 ```
@@ -184,11 +181,15 @@ firewall.
 
 E.g. on linux try this port-unspecific hammer
 ```
-sudo $BERRY/src/github.com/monopole/croupier/nofw.sh 
+sudo $BERRY/src/github.com/monopole/croupier/dropFw.sh 
+```
+On Mac, something like
+```
+ Apple Menu -> System Preferences -> Security & Privacy -> Firewall tab -> disable
 ```
 
-__Don't run any game instances until this is done__, as the game may
-hang on network attempts without any feedback.
+__Don't run any game instances until this is done__,
+as they may hang on network attempts without any feedback (bug).
 
 
 ### Run a mounttable

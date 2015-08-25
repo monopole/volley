@@ -1,9 +1,5 @@
 // +build darwin linux
 
-// Hacked up version of
-// https://godoc.org/golang.org/x/mobile/example/basic
-// https://github.com/golang/mobile/tree/master/example
-
 package main
 
 import (

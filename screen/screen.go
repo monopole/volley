@@ -1,8 +1,5 @@
 package screen
 
-// See
-// https://github.com/golang/mobile/blob/master/example/basic/main.go
-
 import (
 	"encoding/binary"
 	"github.com/monopole/croupier/model"
@@ -17,7 +14,7 @@ const (
 	extraBalls      = 10
 	coordsPerVertex = 3
 	vertexCount     = 4
-	opaque          = 1 // 0 is transparent
+	opaque          = 1
 	bgRed           = 0.1
 	bgGreen         = 0.1
 	bgBlue          = 0.1
@@ -65,10 +62,8 @@ type Screen struct {
 	position gl.Attrib
 	offset   gl.Uniform
 	color    gl.Uniform
-
-	gray   float32
-	width  float32
-	height float32
+	width    float32
+	height   float32
 }
 
 var triangleData []byte
@@ -135,14 +130,6 @@ func (s *Screen) Height() float32 {
 func (s *Screen) Paint(balls []*model.Ball) {
 	gl.ClearColor(bgRed, bgGreen, bgBlue, opaque)
 	gl.Clear(gl.COLOR_BUFFER_BIT)
-
-	s.gray += 0.01
-	if s.gray > 1 {
-		s.gray = 0
-	}
-
-	gl.Uniform4f(s.color, s.gray, 0, 0, opaque)
-
 	gl.EnableVertexAttribArray(s.position)
 	gl.VertexAttribPointer(s.position, coordsPerVertex, gl.FLOAT, false, 0, 0)
 	for _, b := range balls {
