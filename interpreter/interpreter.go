@@ -318,6 +318,7 @@ func (ub *Interpreter) throwBalls(discardPile []discardable) {
 		if ub.chatty {
 			log.Printf("Throwing ball %v (i=%d, k=%d, count=%d).\n",
 				discard.d, i, discard.i, count)
+			log.Printf("  ball = %v\n", discard)
 		}
 		count++
 		b := ub.balls[i]
