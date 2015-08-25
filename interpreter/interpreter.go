@@ -322,12 +322,15 @@ func (ub *Interpreter) throwBalls(discardPile []discardable) {
 		count++
 		b := ub.balls[i]
 		ub.balls = append(ub.balls[:i], ub.balls[i+1:]...)
-		if math.Abs(float64(b.GetVel().X)) < minVelocity {
-			b.SetVel(2*minVelocity, b.GetVel().Y)
+		vx := b.GetVel().X
+		vy := b.GetVel().Y
+		if math.Abs(float64(vx)) < minVelocity {
+			vx = minVelocity
 		}
-		if math.Abs(float64(b.GetVel().Y)) < minVelocity {
-			b.SetVel(b.GetVel().X, 2*minVelocity)
+		if math.Abs(float64(vy)) < minVelocity {
+			vy = minVelocity
 		}
+		b.SetVel(vx, vy)
 		ub.throwOneBall(b, discard.d)
 	}
 }
