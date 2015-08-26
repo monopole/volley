@@ -20,6 +20,7 @@ type Relay struct {
 	chBall          chan *model.Ball
 	chQuit          chan bool
 	chKick          chan bool
+	chMasterCommand chan ifc.MasterCommand
 	chPauseDuration chan float32
 	chGravity       chan float32
 	acceptingData   bool
@@ -33,6 +34,7 @@ func MakeRelay() *Relay {
 	r.chBall = make(chan *model.Ball)
 	r.chQuit = make(chan bool)
 	r.chKick = make(chan bool)
+	r.chMasterCommand = make(chan ifc.MasterCommand)
 	r.chPauseDuration = make(chan float32)
 	r.chGravity = make(chan float32)
 	r.acceptingData = true
@@ -78,6 +80,10 @@ func (r *Relay) ChQuit() <-chan bool {
 	return r.chQuit
 }
 
+func (r *Relay) ChMasterCommand() <-chan ifc.MasterCommand {
+	return r.chMasterCommand
+}
+
 func (r *Relay) ChKick() <-chan bool {
 	return r.chKick
 }
@@ -88,6 +94,27 @@ func (r *Relay) ChPauseDuration() <-chan float32 {
 
 func (r *Relay) ChGravity() <-chan float32 {
 	return r.chGravity
+}
+
+func (r *Relay) DoMasterCommand(_ *context.T, _ rpc.ServerCall, mc ifc.MasterCommand) error {
+	go func() {
+		r.mu.Lock()
+		defer r.mu.Unlock()
+		if r.acceptingData {
+			if config.Chatty {
+				log.Printf("Relay: MasterCommand = %v", mc)
+			}
+			r.chMasterCommand <- mc
+			if config.Chatty {
+				log.Printf("Relay: Passed in mc.")
+			}
+		} else {
+			if config.Chatty {
+				log.Printf("Relay: Discarding mc.")
+			}
+		}
+	}()
+	return nil
 }
 
 func (r *Relay) SetPauseDuration(_ *context.T, _ rpc.ServerCall, p float32) error {

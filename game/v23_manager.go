@@ -161,6 +161,13 @@ func (gm *V23Manager) ChDoorCommand() <-chan model.DoorCommand {
 	return gm.chDoorCommand
 }
 
+func (gm *V23Manager) ChMasterCommand() <-chan ifc.MasterCommand {
+	if gm.relay == nil {
+		return nil
+	}
+	return gm.relay.ChMasterCommand()
+}
+
 func (gm *V23Manager) ChKick() <-chan bool {
 	if gm.relay == nil {
 		return nil
@@ -561,13 +568,26 @@ func (gm *V23Manager) FireBall(count int) {
 func (gm *V23Manager) makeBall(p *model.Player) *model.Ball {
 	dx := rand.Float64()
 	dy := rand.Float64()
-	if dy >= 0.5 {
+	sign := rand.Float64()
+	if sign >= 0.5 {
 		dx = -dx
 	}
 	mag := math.Sqrt(dx*dx + dy*dy)
 	return model.NewBall(p,
-		model.Vec{-1, 0},
+		model.Vec{config.MagicX, 0},
 		model.Vec{float32(dx / mag), float32(dy / mag)})
+}
+
+func (gm *V23Manager) DoMasterCommand(c string) {
+	mc := ifc.MasterCommand{Name: c}
+	for _, vp := range gm.players {
+		if gm.chatty {
+			log.Printf("Commanding %v to %v", vp, mc)
+		}
+		if err := vp.c.DoMasterCommand(gm.ctx, mc, gm.rpcOpts); err != nil {
+			log.Panic("Command send failed; err=%v", err)
+		}
+	}
 }
 
 func (gm *V23Manager) Kick() {

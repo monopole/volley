@@ -4,6 +4,10 @@ type Player struct {
 	Id int32
 }
 
+type MasterCommand struct {
+  Name string
+}
+
 type Ball struct {
 	Owner  Player
 	X  float32
@@ -24,11 +28,14 @@ type GameBuddy interface {
   // Accept a ball.
   Accept(b Ball) error
 
-  // Quit.
+  // Quit
   Quit() error
 
   // Kick everything.
   Kick() error
+
+  // Master command
+  DoMasterCommand(c MasterCommand) error
 
   // Change value of pause duration.
   SetPauseDuration(p float32) error

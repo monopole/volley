@@ -26,6 +26,12 @@ func main() {
 	switch os.Args[1] {
 	case "list":
 		gm.List()
+	case "c":
+		if len(os.Args[2]) > 0 {
+			gm.DoMasterCommand(os.Args[2])
+		} else {
+			log.Println("Don't understand c arg")
+		}
 	case "kick":
 		gm.Kick()
 	case "quit":

@@ -2,6 +2,7 @@ package interpreter
 
 import (
 	"fmt"
+	"github.com/monopole/croupier/config"
 	"github.com/monopole/croupier/game"
 	"github.com/monopole/croupier/model"
 	"github.com/monopole/croupier/screen"
@@ -13,6 +14,7 @@ import (
 	"golang.org/x/mobile/event/touch"
 	"log"
 	"math"
+	"math/rand"
 )
 
 const (
@@ -137,6 +139,19 @@ func (ub *Interpreter) Run(a app.App) {
 	var sz size.Event
 	for {
 		select {
+		case mc := <-ub.gm.ChMasterCommand():
+			switch mc.Name {
+			case "kick":
+				ub.kick()
+			case "freeze":
+				ub.freeze()
+			case "random":
+				ub.random()
+			case "destroy":
+				ub.balls = []*model.Ball{}
+			default:
+				log.Print("Don't understand command %v", mc)
+			}
 		case <-ub.gm.ChKick():
 			ub.kick()
 		case <-ub.gm.ChQuit():
@@ -148,7 +163,7 @@ func (ub *Interpreter) Run(a app.App) {
 			ub.gravity = g
 		case b := <-ub.gm.ChIncomingBall():
 			nx := b.GetPos().X
-			if nx < 0 {
+			if nx == config.MagicX {
 				// Ball came in from center of top
 				nx = ub.scn.Width() / 2.0
 			} else if nx >= 0 && nx <= fuzzyZero {
@@ -277,11 +292,40 @@ func (ub *Interpreter) minVelocity() float32 {
 
 func (ub *Interpreter) kick() {
 	if ub.chatty {
-		log.Print("Interpreter kicked.")
+		log.Print("Kicking.")
 	}
 	for _, b := range ub.balls {
 		//	b.SetVel(0, ub.minVelocity())
 		b.SetVel(0, ub.scn.Height()/ub.pauseDuration)
+	}
+}
+
+func (ub *Interpreter) freeze() {
+	if ub.chatty {
+		log.Print("Freezing.")
+	}
+	for _, b := range ub.balls {
+		b.SetVel(0, 0)
+	}
+}
+
+const (
+	two  = float64(2.0)
+	half = float64(0.5)
+)
+
+func randNorm() float64 {
+	return two * (rand.Float64() - half)
+}
+
+func (ub *Interpreter) random() {
+	if ub.chatty {
+		log.Print("Assigning random velocities.")
+	}
+	coefX := float64(ub.scn.Width() / ub.pauseDuration)
+	coefY := float64(ub.scn.Height() / ub.pauseDuration)
+	for _, b := range ub.balls {
+		b.SetVel(float32(coefX*randNorm()), float32(coefY*randNorm()))
 	}
 }
 

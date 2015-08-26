@@ -12,10 +12,9 @@ package config
 
 const (
 	// MountTableHost = "104.197.96.113" // Asim's gce instance
-	// MountTableHost = "192.168.2.71"  // my laptop on home net
+	MountTableHost = "192.168.2.71" // my laptop on home net
 	// MountTableHost = "192.168.43.136" // my laptop on motox net
-	// MountTableHost = "192.168.43.27" // motox hotspot
-	MountTableHost = "127.0.0.1"
+	// MountTableHost = "127.0.0.1"
 
 	// MountTablePort = "3389" // Asim's preferred port
 	MountTablePort = "23000"
@@ -25,6 +24,7 @@ const (
 	NamespaceRoot = "/" + MountTableHost + ":" + MountTablePort
 	FailFast      = false
 	TestDomain    = "http://www.example.com"
+	MagicX        = -99
 	Chatty        = false
 	RootName      = "volley/player"
 )
