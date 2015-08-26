@@ -19,22 +19,16 @@ const (
 	// Start with generous slop.
 	defaultMaxDistSqForImpulse = 5000
 	debugShowResizes           = false
-	maxHoldCount               = 20
+	maxHoldCount               = 30
 	magicButtonSideLength      = 100
 	fuzzyZero                  = 0.1
-	minDragLength              = 10
-	// Arbitrary statement that this many time units passed between each
-	// paint event.  Making this number smaller makes balls move faster.
-	timeStep = 100.0
-	// Window height and width are provided in "pixels".
-	// Velocity == "pixels traversed per timeStep".
-	minVelocity = 20.0 / timeStep
+	minDragLength              = 6
 )
 
 type Interpreter struct {
 	isAlive             bool
 	maxDistSqForImpulse float32
-	isGravity           bool
+	gravity             float32
 	numBallsCreated     int
 	firstResizeDone     bool
 	gm                  *game.V23Manager
@@ -45,11 +39,17 @@ type Interpreter struct {
 	touchY              float32
 	beginX              float32
 	beginY              float32
-	velocityX           float32
-	velocityY           float32
 	leftDoor            model.DoorState
 	rightDoor           model.DoorState
 	chBallCommand       chan model.BallCommand // Owned, written to.
+	// A time unit representing how much time (in some unspecified time
+	// unit) between each paint event.  Making this number smaller makes
+	// balls move faster.
+	pauseDuration float32
+
+	// Window height and width are provided in "pixels".
+	// Velocity == "pixels traversed per timeStep".
+	pixelsToCrossDuringPause float32
 }
 
 func NewInterpreter(
@@ -66,17 +66,19 @@ func NewInterpreter(
 	return &Interpreter{
 		false, // isAlive
 		defaultMaxDistSqForImpulse,
-		false, // isGravity
+		0,     // gravity
 		0,     // numBallsCreated
 		false, // firstResizeDone
 		gm,
 		scn,
 		chatty,
 		[]*model.Ball{},
-		0, 0, 0, 0, minVelocity, minVelocity,
+		0, 0, 0, 0,
 		model.Closed, // left door
 		model.Closed, // right door
 		make(chan model.BallCommand),
+		200, // pauseDuration
+		20,  // pixelsToCrossDuringPause
 	}
 }
 
@@ -140,9 +142,16 @@ func (ub *Interpreter) Run(a app.App) {
 		case <-ub.gm.ChQuit():
 			ub.stop()
 			return
+		case pd := <-ub.gm.ChPauseDuration():
+			ub.pauseDuration = pd
+		case g := <-ub.gm.ChGravity():
+			ub.gravity = g
 		case b := <-ub.gm.ChIncomingBall():
 			nx := b.GetPos().X
-			if nx <= fuzzyZero {
+			if nx < 0 {
+				// Ball came in from center of top
+				nx = ub.scn.Width() / 2.0
+			} else if nx >= 0 && nx <= fuzzyZero {
 				// Ball came in from left.
 				nx = 0
 			} else {
@@ -210,21 +219,28 @@ func (ub *Interpreter) Run(a app.App) {
 				case touch.TypeMove:
 					holdCount++
 				case touch.TypeEnd:
+					if ub.chatty {
+						log.Printf("holdcount = %d", holdCount)
+					}
 					if holdCount > 0 && holdCount <= maxHoldCount {
 						// If they hold on too long, ignore it.
 						dx := float64(e.X - ub.beginX)
 						dy := float64(e.Y - ub.beginY)
 						mag := math.Sqrt(dx*dx + dy*dy)
 						if mag >= minDragLength {
+							ndx := float32(dx/mag) * ub.scn.Width() / ub.pauseDuration
+							ndy := float32(dy/mag) * ub.scn.Height() / ub.pauseDuration
 							b := model.NewBall(nil,
 								model.Vec{ub.beginX, ub.beginY},
-								// Ball velocities differ only in direction
-								// at the moment.
-								model.Vec{float32(dx / mag), float32(dy / mag)})
+								model.Vec{ndx, ndy})
 							if ub.chatty {
 								log.Printf("Sending impulse: %s", b.String())
 							}
 							ub.applyImpulse(b)
+						} else {
+							if ub.chatty {
+								log.Printf("Mag only %.4f", mag)
+							}
 						}
 					}
 					holdCount = 0
@@ -235,8 +251,6 @@ func (ub *Interpreter) Run(a app.App) {
 				// the size.
 				sz = e
 				ub.scn.ReSize(float32(sz.WidthPx), float32(sz.HeightPx))
-				ub.velocityX = ub.scn.Width() / timeStep
-				ub.velocityY = ub.scn.Height() / timeStep
 				ub.resetImpulseLimit()
 				if ub.chatty && debugShowResizes {
 					log.Printf(
@@ -257,12 +271,17 @@ func (ub *Interpreter) Run(a app.App) {
 	}
 }
 
+func (ub *Interpreter) minVelocity() float32 {
+	return ub.pixelsToCrossDuringPause / ub.pauseDuration
+}
+
 func (ub *Interpreter) kick() {
 	if ub.chatty {
 		log.Print("Interpreter kicked.")
 	}
 	for _, b := range ub.balls {
-		b.SetVel(0, -0.8)
+		//	b.SetVel(0, ub.minVelocity())
+		b.SetVel(0, ub.scn.Height()/ub.pauseDuration)
 	}
 }
 
@@ -278,14 +297,14 @@ func (ub *Interpreter) kick() {
 // seem to be in the same units (pixels).
 func (ub *Interpreter) moveBalls() {
 	discardPile := []discardable{}
+	velX0 := ub.scn.Width() / ub.pauseDuration
+	velY0 := ub.scn.Height() / ub.pauseDuration
 	for i, b := range ub.balls {
 		dx := b.GetVel().X
-		dy := b.GetVel().Y
-		if ub.isGravity {
-			// TODO
-		}
-		nx := b.GetPos().X + ub.velocityX*dx
-		ny := b.GetPos().Y + ub.velocityY*dy
+		dy := b.GetVel().Y + ub.gravity
+
+		nx := b.GetPos().X + dx*velX0
+		ny := b.GetPos().Y + dy*velY0
 		if nx <= 0 {
 			// Ball hit left side of screen.
 			if ub.leftDoor == model.Open {
@@ -362,6 +381,7 @@ func (ub *Interpreter) discardBalls() {
 		// Nowhere to discard balls.
 		return
 	}
+	minVelocity := ub.minVelocity()
 	discardPile := []discardable{}
 	for i, b := range ub.balls {
 		vx := b.GetVel().X
@@ -409,7 +429,7 @@ func (ub *Interpreter) discardBalls() {
 				}
 			}
 		}
-		if math.Abs(float64(vy)) < minVelocity {
+		if math.Abs(float64(vy)) < float64(minVelocity) {
 			// Kick it up.
 			vy = -minVelocity
 		}
@@ -450,7 +470,7 @@ func (ub *Interpreter) resetImpulseLimit() {
 	if ub.scn.Width() > max {
 		max = ub.scn.Width()
 	}
-	max = max / 4
+	max = max / 3
 	ub.maxDistSqForImpulse = max * max
 }
 

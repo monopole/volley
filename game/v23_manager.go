@@ -19,6 +19,8 @@ import (
 	"github.com/monopole/croupier/model"
 	"github.com/monopole/croupier/relay"
 	"log"
+	"math"
+	"math/rand"
 	"net/http"
 	"sort"
 	"strconv"
@@ -164,6 +166,20 @@ func (gm *V23Manager) ChKick() <-chan bool {
 		return nil
 	}
 	return gm.relay.ChKick()
+}
+
+func (gm *V23Manager) ChPauseDuration() <-chan float32 {
+	if gm.relay == nil {
+		return nil
+	}
+	return gm.relay.ChPauseDuration()
+}
+
+func (gm *V23Manager) ChGravity() <-chan float32 {
+	if gm.relay == nil {
+		return nil
+	}
+	return gm.relay.ChGravity()
 }
 
 func (gm *V23Manager) ChIncomingBall() <-chan *model.Ball {
@@ -523,6 +539,37 @@ func (gm *V23Manager) List() {
 	}
 }
 
+func (gm *V23Manager) FireBall(count int) {
+	for k := 0; k < count; k++ {
+		for _, vp := range gm.players {
+			<-time.After(100 * time.Millisecond)
+			b := gm.makeBall(vp.p)
+			wb := serializeBall(b)
+			if gm.chatty {
+				log.Printf("Fire ball to %v\n", vp.p)
+			}
+			if err := vp.c.Accept(gm.ctx, wb, gm.rpcOpts); err != nil {
+				log.Panic("Fire ball %v failed; err=%v", b, err)
+			}
+			if gm.chatty {
+				log.Printf("Fire ball %v RPC done.", b)
+			}
+		}
+	}
+}
+
+func (gm *V23Manager) makeBall(p *model.Player) *model.Ball {
+	dx := rand.Float64()
+	dy := rand.Float64()
+	if dy >= 0.5 {
+		dx = -dx
+	}
+	mag := math.Sqrt(dx*dx + dy*dy)
+	return model.NewBall(p,
+		model.Vec{-1, 0},
+		model.Vec{float32(dx / mag), float32(dy / mag)})
+}
+
 func (gm *V23Manager) Kick() {
 	for _, vp := range gm.players {
 		if gm.chatty {
@@ -530,6 +577,28 @@ func (gm *V23Manager) Kick() {
 		}
 		if err := vp.c.Kick(gm.ctx, gm.rpcOpts); err != nil {
 			log.Panic("Kick failed; err=%v", err)
+		}
+	}
+}
+
+func (gm *V23Manager) SetPauseDuration(pd float32) {
+	for _, vp := range gm.players {
+		if gm.chatty {
+			log.Printf("Setting pause duration to %.2f", pd)
+		}
+		if err := vp.c.SetPauseDuration(gm.ctx, pd, gm.rpcOpts); err != nil {
+			log.Panic("SetPauseDuration failed; err=%v", err)
+		}
+	}
+}
+
+func (gm *V23Manager) SetGravity(g float32) {
+	for _, vp := range gm.players {
+		if gm.chatty {
+			log.Printf("Setting gravity to %.2f", g)
+		}
+		if err := vp.c.SetGravity(gm.ctx, g, gm.rpcOpts); err != nil {
+			log.Panic("SetGravity failed; err=%v", err)
 		}
 	}
 }

@@ -29,4 +29,10 @@ type GameBuddy interface {
 
   // Kick everything.
   Kick() error
+
+  // Change value of pause duration.
+  SetPauseDuration(p float32) error
+
+  // Change value of gravity
+  SetGravity(p float32) error
 }

@@ -15,13 +15,15 @@ import (
 )
 
 type Relay struct {
-	chRecognize   chan *model.Player
-	chForget      chan *model.Player
-	chBall        chan *model.Ball
-	chQuit        chan bool
-	chKick        chan bool
-	acceptingData bool
-	mu            sync.RWMutex
+	chRecognize     chan *model.Player
+	chForget        chan *model.Player
+	chBall          chan *model.Ball
+	chQuit          chan bool
+	chKick          chan bool
+	chPauseDuration chan float32
+	chGravity       chan float32
+	acceptingData   bool
+	mu              sync.RWMutex
 }
 
 func MakeRelay() *Relay {
@@ -31,6 +33,8 @@ func MakeRelay() *Relay {
 	r.chBall = make(chan *model.Ball)
 	r.chQuit = make(chan bool)
 	r.chKick = make(chan bool)
+	r.chPauseDuration = make(chan float32)
+	r.chGravity = make(chan float32)
 	r.acceptingData = true
 	if config.Chatty {
 		log.Printf("Made Relay.")
@@ -76,6 +80,56 @@ func (r *Relay) ChQuit() <-chan bool {
 
 func (r *Relay) ChKick() <-chan bool {
 	return r.chKick
+}
+
+func (r *Relay) ChPauseDuration() <-chan float32 {
+	return r.chPauseDuration
+}
+
+func (r *Relay) ChGravity() <-chan float32 {
+	return r.chGravity
+}
+
+func (r *Relay) SetPauseDuration(_ *context.T, _ rpc.ServerCall, p float32) error {
+	go func() {
+		r.mu.Lock()
+		defer r.mu.Unlock()
+		if r.acceptingData {
+			if config.Chatty {
+				log.Printf("Relay: Pause duration = %.2f", p)
+			}
+			r.chPauseDuration <- p
+			if config.Chatty {
+				log.Printf("Relay: Passed in pause.")
+			}
+		} else {
+			if config.Chatty {
+				log.Printf("Relay: Discarding pause.")
+			}
+		}
+	}()
+	return nil
+}
+
+func (r *Relay) SetGravity(_ *context.T, _ rpc.ServerCall, g float32) error {
+	go func() {
+		r.mu.Lock()
+		defer r.mu.Unlock()
+		if r.acceptingData {
+			if config.Chatty {
+				log.Printf("Relay: gravity = %.2f", g)
+			}
+			r.chGravity <- g
+			if config.Chatty {
+				log.Printf("Relay: Passed in gravity.")
+			}
+		} else {
+			if config.Chatty {
+				log.Printf("Relay: Discarding gravity.")
+			}
+		}
+	}()
+	return nil
 }
 
 func (r *Relay) Kick(_ *context.T, _ rpc.ServerCall) error {

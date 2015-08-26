@@ -10,11 +10,10 @@ import (
 )
 
 func main() {
-	fmt.Println(os.Args)
-	if len(os.Args) < 1 {
+	if len(os.Args) < 2 {
+		fmt.Println("need args")
 		return
 	}
-
 	gm := game.NewV23Manager(
 		config.Chatty, config.RootName, config.NamespaceRoot)
 	if !gm.IsReadyToRun(true) {
@@ -24,22 +23,26 @@ func main() {
 		return
 	}
 	gm.RunPrep(nil)
-
-	if os.Args[1] == "list" {
-		log.Printf("listing!")
+	switch os.Args[1] {
+	case "list":
 		gm.List()
-		return
-	}
-	if os.Args[1] == "kick" {
-		log.Printf("kicking!")
+	case "kick":
 		gm.Kick()
-		return
-	}
-	if os.Args[1] == "quit" {
+	case "quit":
 		id, _ := strconv.Atoi(os.Args[2])
-		log.Printf("quitting %d", id)
 		gm.Quit(id)
-		return
+	case "fire":
+		count, _ := strconv.Atoi(os.Args[2])
+		gm.FireBall(count)
+	case "pause":
+		x, _ := strconv.ParseFloat(os.Args[2], 32)
+		pd := float32(x)
+		gm.SetPauseDuration(pd)
+	case "gravity":
+		x, _ := strconv.ParseFloat(os.Args[2], 32)
+		g := float32(x)
+		gm.SetGravity(g)
+	default:
+		log.Printf("Don't understand: %s\n", os.Args[1])
 	}
-	log.Printf("Don't understand: %s\n", os.Args[1])
 }
