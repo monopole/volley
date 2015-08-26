@@ -1,7 +1,7 @@
 # volley
 Go + mobile + GL + [v23](https://v.io)
 
-[Demo video](https://youtu.be/o3VHfjlpnJg).
+[Demo video](https://youtu.be/dk-5BkO_P14).
 
 To try v23, sign up [here](https://goo.gl/ETo8Mt).
 
