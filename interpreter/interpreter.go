@@ -145,6 +145,10 @@ func (ub *Interpreter) Run(a app.App) {
 				ub.kick()
 			case "freeze":
 				ub.freeze()
+			case "left":
+				ub.left()
+			case "right":
+				ub.right()
 			case "random":
 				ub.random()
 			case "destroy":
@@ -297,6 +301,18 @@ func (ub *Interpreter) kick() {
 	for _, b := range ub.balls {
 		//	b.SetVel(0, ub.minVelocity())
 		b.SetVel(0, ub.scn.Height()/ub.pauseDuration)
+	}
+}
+
+func (ub *Interpreter) left() {
+	for _, b := range ub.balls {
+		b.SetVel(-ub.scn.Width()/ub.pauseDuration, 0)
+	}
+}
+
+func (ub *Interpreter) right() {
+	for _, b := range ub.balls {
+		b.SetVel(ub.scn.Width()/ub.pauseDuration, 0)
 	}
 }
 
