@@ -13,7 +13,7 @@ import (
 
 func main() {
 	app.Main(func(a app.App) {
-		nsRoot := game.DetermineNamespaceRoot()
+		nsRoot := "/" + game.DetermineNamespaceRoot()
 		log.Printf("Using v23.namespace.root=%s", nsRoot)
 		interpreter.NewInterpreter(
 			config.Chatty,
