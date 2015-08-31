@@ -1,8 +1,7 @@
 # volley
-Go + mobile + GL + [v23](https://v.io)
 
+Go + mobile + GL + [v23](https://v.io).
 [Demo video](https://youtu.be/dk-5BkO_P14).
-
 To try v23, sign up [here](https://goo.gl/ETo8Mt).
 
 ## Install prerequisites
@@ -85,9 +84,10 @@ Full instructions [here](https://golang.org/doc/install).
 On a 64-bit linux box, just try this:
 
 ```
-sudo mv -n /usr/local/go /usr/local/old_go
-tarball=https://storage.googleapis.com/golang/go1.5.linux-amd64.tar.gz
-curl $tarball -o - | sudo tar -C /usr/local -xzf -
+sudo /bin/rm -rf /usr/local/go_old
+sudo mv -n /usr/local/go /usr/local/go_old
+( tarball=https://storage.googleapis.com/golang/go1.5.linux-amd64.tar.gz
+  curl $tarball -o - | sudo tar -C /usr/local -xzf - )
 ```
 
 #### Add to PATH
@@ -201,21 +201,26 @@ Store this important address in an env var:
 ```
 sedPa="s/.*(192\.168\.[0-9]+\.[0-9]+).*/\1/p"
 export MT_HOST=`ifconfig | grep "inet addr:192.168" | sed -rn $sedPa`
-echo MT_HOST=$MT_HOST
+
+MT_PORT=23000
+
+V23_NS_ROOT="$MT_HOST:$MT_PORT"
+
+echo V23_NS_ROOT=$V23_NS_ROOT
 ```
 
 On said laptop, run a mounttable daemon.
 Game instances need this to find each other.
 
 ```
-mounttabled --v23.tcp.address ${MT_HOST}:23000 &
+mounttabled --v23.tcp.address $V23_NS_ROOT &
 ```
 
 To verify that the table is up, on another laptop connected to
 the same WAP, query it from another computer:
 
 ```
-namespace --v23.namespace.root /${MT_HOST}:23000 glob -l '*/*'
+namespace --v23.namespace.root /$V23_NS_ROOT glob -l '*/*'
 ```
 
 This is basically `ls` for the mount table.
@@ -260,7 +265,7 @@ go install $GITDIR/volley
 
 Check the namespace:
 ```
-namespace --v23.namespace.root /${MT_HOST}:23000 glob -l '*/*'
+namespace --v23.namespace.root /$V23_NS_ROOT glob -l '*/*'
 ```
 
 Open another terminal and run (adjusting path as needed obviously)
