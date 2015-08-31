@@ -25,6 +25,6 @@ const (
 	FailFast      = false
 	TestDomain    = "http://trustybike.net"
 	MagicX        = -99
-	Chatty        = false
+	Chatty        = true
 	RootName      = "volley/player"
 )
