@@ -14,8 +14,10 @@ func main() {
 		fmt.Println("need args")
 		return
 	}
+	nsRoot := "/" + game.DetermineNamespaceRoot()
+	log.Printf("Using v23.namespace.root=%s", nsRoot)
 	gm := game.NewV23Manager(
-		config.Chatty, config.RootName, config.NamespaceRoot)
+		config.Chatty, config.RootName, nsRoot)
 	if !gm.IsReadyToRun(true) {
 		if config.Chatty {
 			log.Printf("gm not ready!")
