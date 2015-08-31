@@ -23,7 +23,7 @@ const (
 const (
 	NamespaceRoot = "/" + MountTableHost + ":" + MountTablePort
 	FailFast      = false
-	TestDomain    = "http://www.example.com"
+	TestDomain    = "http://trustybike.net"
 	MagicX        = -99
 	Chatty        = false
 	RootName      = "volley/player"

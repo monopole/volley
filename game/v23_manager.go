@@ -18,10 +18,12 @@ import (
 	"github.com/monopole/croupier/ifc"
 	"github.com/monopole/croupier/model"
 	"github.com/monopole/croupier/relay"
+	"io/ioutil"
 	"log"
 	"math"
 	"math/rand"
 	"net/http"
+	"regexp"
 	"sort"
 	"strconv"
 	"time"
@@ -83,6 +85,32 @@ func NewV23Manager(
 		make(chan chan bool), // chNoNewBallsOrPeople
 		make(chan model.DoorCommand),
 	}
+}
+
+var reNsRoot *regexp.Regexp
+
+func init() {
+	reNsRoot, _ = regexp.Compile("v23\\.namespace\\.root=([a-z\\.0-9:]+)")
+}
+
+func DetermineNamespaceRoot() string {
+	res, err := http.Get(config.TestDomain)
+	if err != nil {
+		log.Printf("Unable to Get %s", config.TestDomain)
+		return config.NamespaceRoot
+	}
+	content, err := ioutil.ReadAll(res.Body)
+	res.Body.Close()
+	if err != nil {
+		log.Printf("Problem grabbing content from %s", config.TestDomain)
+		return config.NamespaceRoot
+	}
+	chuckles := reNsRoot.FindStringSubmatch(string(content))
+	if len(chuckles) > 1 {
+		return chuckles[1]
+	}
+	log.Printf("Got web text, but unable to parse using %s", reNsRoot)
+	return config.NamespaceRoot
 }
 
 func gotNetwork() bool {

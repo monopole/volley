@@ -8,14 +8,17 @@ import (
 	"github.com/monopole/croupier/interpreter"
 	"github.com/monopole/croupier/screen"
 	"golang.org/x/mobile/app"
+	"log"
 )
 
 func main() {
 	app.Main(func(a app.App) {
+		nsRoot := game.DetermineNamespaceRoot()
+		log.Printf("Using v23.namespace.root=%s", nsRoot)
 		interpreter.NewInterpreter(
 			config.Chatty,
 			game.NewV23Manager(
-				config.Chatty, config.RootName, config.NamespaceRoot),
+				config.Chatty, config.RootName, nsRoot),
 			screen.NewScreen(),
 		).Run(a)
 	})
