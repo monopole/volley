@@ -199,7 +199,7 @@ IP addresses assigned by a local WAP have the form `192.168.*.*`
 
 Store this important address in an env var:
 ```
-sedPa="s/.*(192\.168\.[0-9]+\.[0-9]+).*/\1/p"
+sedPa="s/.*addr:(192\.168\.[0-9]+\.[0-9]+).*/\1/p"
 export MT_HOST=`ifconfig | grep "inet addr:192.168" | sed -rn $sedPa`
 
 MT_PORT=23000
