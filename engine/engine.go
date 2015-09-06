@@ -3,8 +3,8 @@ package engine
 import (
 	"fmt"
 	"github.com/monopole/croupier/config"
-	"github.com/monopole/croupier/game"
 	"github.com/monopole/croupier/model"
+	"github.com/monopole/croupier/net"
 	"github.com/monopole/croupier/screen"
 	"golang.org/x/mobile/app"
 	"golang.org/x/mobile/event/key"
@@ -33,7 +33,7 @@ type Engine struct {
 	gravity             float32
 	numBallsCreated     int
 	firstResizeDone     bool
-	gm                  *game.V23Manager
+	gm                  *net.V23Manager
 	scn                 *screen.Screen
 	chatty              bool
 	balls               []*model.Ball
@@ -56,7 +56,7 @@ type Engine struct {
 
 func NewEngine(
 	chatty bool,
-	gm *game.V23Manager,
+	gm *net.V23Manager,
 	scn *screen.Screen,
 ) *Engine {
 	if scn == nil {

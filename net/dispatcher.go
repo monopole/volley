@@ -1,4 +1,4 @@
-package game
+package net
 
 import (
 	"v.io/v23/rpc"

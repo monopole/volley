@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/monopole/croupier/config"
-	"github.com/monopole/croupier/game"
+	"github.com/monopole/croupier/net"
 	"log"
 	"os"
 	"strconv"
@@ -14,9 +14,9 @@ func main() {
 		fmt.Println("need args")
 		return
 	}
-	nsRoot := "/" + game.DetermineNamespaceRoot()
+	nsRoot := "/" + net.DetermineNamespaceRoot()
 	log.Printf("Using v23.namespace.root=%s", nsRoot)
-	gm := game.NewV23Manager(
+	gm := net.NewV23Manager(
 		config.Chatty, config.RootName, nsRoot)
 	if !gm.IsReadyToRun(true) {
 		if config.Chatty {

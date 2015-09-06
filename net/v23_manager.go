@@ -10,7 +10,7 @@
 // go routines to manage data coming in on various channels, and
 // establishes contact with the other players.
 
-package game
+package net
 
 import (
 	"fmt"
