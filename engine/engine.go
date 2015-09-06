@@ -5,7 +5,6 @@ import (
 	"github.com/monopole/croupier/config"
 	"github.com/monopole/croupier/model"
 	"github.com/monopole/croupier/net"
-	"github.com/monopole/croupier/screen"
 	"golang.org/x/mobile/app"
 	"golang.org/x/mobile/event/key"
 	"golang.org/x/mobile/event/lifecycle"
@@ -34,7 +33,7 @@ type Engine struct {
 	numBallsCreated     int
 	firstResizeDone     bool
 	gm                  *net.V23Manager
-	scn                 *screen.Screen
+	scn                 model.Screen
 	chatty              bool
 	balls               []*model.Ball
 	touchX              float32
@@ -57,7 +56,7 @@ type Engine struct {
 func NewEngine(
 	chatty bool,
 	gm *net.V23Manager,
-	scn *screen.Screen,
+	scn model.Screen,
 ) *Engine {
 	if scn == nil {
 		log.Panic("Screen cannot be nil")
