@@ -32,7 +32,7 @@ type Engine struct {
 	gravity             float32
 	numBallsCreated     int
 	firstResizeDone     bool
-	gm                  *net.V23Manager
+	vm                  *net.V23Manager
 	scn                 model.Screen
 	chatty              bool
 	balls               []*model.Ball
@@ -55,13 +55,13 @@ type Engine struct {
 
 func NewEngine(
 	chatty bool,
-	gm *net.V23Manager,
+	vm *net.V23Manager,
 	scn model.Screen,
 ) *Engine {
 	if scn == nil {
 		log.Panic("Screen cannot be nil")
 	}
-	if gm == nil {
+	if vm == nil {
 		log.Panic("V23Manager cannot be nil")
 	}
 	return &Engine{
@@ -70,7 +70,7 @@ func NewEngine(
 		0,     // gravity
 		0,     // numBallsCreated
 		false, // firstResizeDone
-		gm,
+		vm,
 		scn,
 		chatty,
 		[]*model.Ball{},
@@ -84,7 +84,7 @@ func NewEngine(
 }
 
 func (gn *Engine) String() string {
-	return fmt.Sprintf("%v %v", gn.gm.Me(), gn.balls)
+	return fmt.Sprintf("%v %v", gn.vm.Me(), gn.balls)
 }
 
 func (gn *Engine) start() {
@@ -93,8 +93,8 @@ func (gn *Engine) start() {
 	}
 	gn.scn.Start()
 
-	gn.gm.RunPrep(gn.chBallCommand)
-	go gn.gm.Run()
+	gn.vm.RunPrep(gn.chBallCommand)
+	go gn.vm.Run()
 
 	if gn.firstResizeDone && gn.numBallsCreated < 1 {
 		gn.createBall()
@@ -115,7 +115,7 @@ func (gn *Engine) stop() {
 	if gn.chatty {
 		log.Println("****************************** Engine stopping.")
 	}
-	gn.gm.NoNewBallsOrPeople()
+	gn.vm.NoNewBallsOrPeople()
 	gn.discardBalls()
 	// Closing this channel sends a nil, which has to be handled on the
 	// other side - so don't bother to close(gn.chBallCommand)
@@ -123,7 +123,7 @@ func (gn *Engine) stop() {
 		log.Println("Sending shutdown to v23.")
 	}
 	// Wait for v23 manager to shutdown.
-	gn.gm.Stop()
+	gn.vm.Stop()
 	gn.isAlive = false
 	if gn.chatty {
 		log.Println("Engine done!")
@@ -138,7 +138,7 @@ func (gn *Engine) Run(a app.App) {
 	var sz size.Event
 	for {
 		select {
-		case mc := <-gn.gm.ChMasterCommand():
+		case mc := <-gn.vm.ChMasterCommand():
 			switch mc.Name {
 			case "kick":
 				gn.kick()
@@ -155,16 +155,16 @@ func (gn *Engine) Run(a app.App) {
 			default:
 				log.Print("Don't understand command %v", mc)
 			}
-		case <-gn.gm.ChKick():
+		case <-gn.vm.ChKick():
 			gn.kick()
-		case <-gn.gm.ChQuit():
+		case <-gn.vm.ChQuit():
 			gn.stop()
 			return
-		case pd := <-gn.gm.ChPauseDuration():
+		case pd := <-gn.vm.ChPauseDuration():
 			gn.pauseDuration = pd
-		case g := <-gn.gm.ChGravity():
+		case g := <-gn.vm.ChGravity():
 			gn.gravity = g
-		case b := <-gn.gm.ChIncomingBall():
+		case b := <-gn.vm.ChIncomingBall():
 			nx := b.GetPos().X
 			if nx == config.MagicX {
 				// Ball came in from center of top
@@ -181,7 +181,7 @@ func (gn *Engine) Run(a app.App) {
 			b.SetPos(nx, ny)
 			// TODO: Adjust velocity per refraction-like rules?
 			gn.balls = append(gn.balls, b)
-		case dc := <-gn.gm.ChDoorCommand():
+		case dc := <-gn.vm.ChDoorCommand():
 			gn.handleDoor(dc)
 		case event := <-a.Events():
 			switch e := app.Filter(event).(type) {
@@ -190,7 +190,7 @@ func (gn *Engine) Run(a app.App) {
 				case lifecycle.CrossOn:
 					if !gn.isAlive {
 						// Calls v23.Init(), determines current players from MT, etc.
-						if !gn.gm.IsReadyToRun(false) {
+						if !gn.vm.IsReadyToRun(false) {
 							return
 						}
 						gn.start()
@@ -280,7 +280,7 @@ func (gn *Engine) Run(a app.App) {
 				if !gn.firstResizeDone {
 					gn.firstResizeDone = true
 					// Don't place the first ball till size is known.
-					if gn.numBallsCreated < 1 && gn.gm.IsRunning() {
+					if gn.numBallsCreated < 1 && gn.vm.IsRunning() {
 						gn.createBall()
 					}
 				}
@@ -512,7 +512,7 @@ func (gn *Engine) createBall() {
 	gn.balls = append(
 		gn.balls,
 		model.NewBall(
-			gn.gm.Me(),
+			gn.vm.Me(),
 			model.Vec{gn.scn.Width() / 2, gn.scn.Height() / 2},
 			model.Vec{0, 0}))
 	// Since balls can come in from the outside,  len(gn.balls) is
