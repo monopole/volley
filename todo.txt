@@ -1,0 +1,4 @@
+rename game/v23_manager to net/manager (this should impl an interface)
+
+pass reley directly to engine, so it doesn't have to pass everything
+through.
