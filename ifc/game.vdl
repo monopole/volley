@@ -16,7 +16,7 @@ type Ball struct {
 	Dy float32
 }
 
-type GameBuddy interface {
+type GameService interface {
   // Receiver adds the player p to list of known players and
   // concomitantly promises to inform p of game state changes.
   Recognize(p Player) error

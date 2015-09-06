@@ -37,7 +37,7 @@ import (
 
 type vPlayer struct {
 	p *model.Player
-	c ifc.GameBuddyClientStub
+	c ifc.GameServiceClientStub
 }
 
 type V23Manager struct {
@@ -177,7 +177,7 @@ func (gm *V23Manager) IsReadyToRun(isGameMaster bool) bool {
 		log.Printf("Calling myself %s\n", myName)
 	}
 
-	err := s.Serve(myName, ifc.GameBuddyServer(gm.relay), MakeAuthorizer())
+	err := s.Serve(myName, ifc.GameServiceServer(gm.relay), MakeAuthorizer())
 	if err != nil {
 		log.Panic("Error serving relay: ", err)
 		return false
@@ -243,7 +243,7 @@ func (gm *V23Manager) recognizeOther(p *model.Player) {
 	if gm.chatty {
 		log.Printf("I (%v) am recognizing %v.", gm.Me(), p)
 	}
-	vp := &vPlayer{p, ifc.GameBuddyClient(gm.serverName(p.Id()))}
+	vp := &vPlayer{p, ifc.GameServiceClient(gm.serverName(p.Id()))}
 
 	// Keep the player list sorted.
 	k := gm.findInsertion(p)
