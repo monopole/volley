@@ -1,4 +1,4 @@
-package interpreter
+package engine
 
 import (
 	"fmt"
@@ -27,7 +27,7 @@ const (
 	minDragLength              = 6
 )
 
-type Interpreter struct {
+type Engine struct {
 	isAlive             bool
 	maxDistSqForImpulse float32
 	gravity             float32
@@ -54,18 +54,18 @@ type Interpreter struct {
 	pixelsToCrossDuringPause float32
 }
 
-func NewInterpreter(
+func NewEngine(
 	chatty bool,
 	gm *game.V23Manager,
 	scn *screen.Screen,
-) *Interpreter {
+) *Engine {
 	if scn == nil {
 		log.Panic("Screen cannot be nil")
 	}
 	if gm == nil {
 		log.Panic("V23Manager cannot be nil")
 	}
-	return &Interpreter{
+	return &Engine{
 		false, // isAlive
 		defaultMaxDistSqForImpulse,
 		0,     // gravity
@@ -84,180 +84,180 @@ func NewInterpreter(
 	}
 }
 
-func (ub *Interpreter) String() string {
-	return fmt.Sprintf("%v %v", ub.gm.Me(), ub.balls)
+func (gn *Engine) String() string {
+	return fmt.Sprintf("%v %v", gn.gm.Me(), gn.balls)
 }
 
-func (ub *Interpreter) start() {
-	if ub.chatty {
-		log.Printf("Interpreter starting.\n")
+func (gn *Engine) start() {
+	if gn.chatty {
+		log.Printf("Engine starting.\n")
 	}
-	ub.scn.Start()
+	gn.scn.Start()
 
-	ub.gm.RunPrep(ub.chBallCommand)
-	go ub.gm.Run()
+	gn.gm.RunPrep(gn.chBallCommand)
+	go gn.gm.Run()
 
-	if ub.firstResizeDone && ub.numBallsCreated < 1 {
-		ub.createBall()
+	if gn.firstResizeDone && gn.numBallsCreated < 1 {
+		gn.createBall()
 	}
 
-	ub.isAlive = true
-	if ub.chatty {
-		log.Printf("Interpreter started.\n")
+	gn.isAlive = true
+	if gn.chatty {
+		log.Printf("Engine started.\n")
 	}
 }
 
-func (ub *Interpreter) stop() {
-	ub.scn.Clear()
-	if !ub.isAlive {
-		log.Println("Stop called on dead interpreter.")
+func (gn *Engine) stop() {
+	gn.scn.Clear()
+	if !gn.isAlive {
+		log.Println("Stop called on dead gn.")
 		return
 	}
-	if ub.chatty {
-		log.Println("****************************** Interpreter stopping.")
+	if gn.chatty {
+		log.Println("****************************** Engine stopping.")
 	}
-	ub.gm.NoNewBallsOrPeople()
-	ub.discardBalls()
+	gn.gm.NoNewBallsOrPeople()
+	gn.discardBalls()
 	// Closing this channel sends a nil, which has to be handled on the
-	// other side - so don't bother to close(ub.chBallCommand)
-	if ub.chatty {
+	// other side - so don't bother to close(gn.chBallCommand)
+	if gn.chatty {
 		log.Println("Sending shutdown to v23.")
 	}
 	// Wait for v23 manager to shutdown.
-	ub.gm.Stop()
-	ub.isAlive = false
-	if ub.chatty {
-		log.Println("Interpreter done!")
+	gn.gm.Stop()
+	gn.isAlive = false
+	if gn.chatty {
+		log.Println("Engine done!")
 	}
 }
 
-func (ub *Interpreter) Run(a app.App) {
-	if ub.chatty {
-		log.Println("Starting interpreter Run.")
+func (gn *Engine) Run(a app.App) {
+	if gn.chatty {
+		log.Println("Starting gn Run.")
 	}
 	holdCount := 0
 	var sz size.Event
 	for {
 		select {
-		case mc := <-ub.gm.ChMasterCommand():
+		case mc := <-gn.gm.ChMasterCommand():
 			switch mc.Name {
 			case "kick":
-				ub.kick()
+				gn.kick()
 			case "freeze":
-				ub.freeze()
+				gn.freeze()
 			case "left":
-				ub.left()
+				gn.left()
 			case "right":
-				ub.right()
+				gn.right()
 			case "random":
-				ub.random()
+				gn.random()
 			case "destroy":
-				ub.balls = []*model.Ball{}
+				gn.balls = []*model.Ball{}
 			default:
 				log.Print("Don't understand command %v", mc)
 			}
-		case <-ub.gm.ChKick():
-			ub.kick()
-		case <-ub.gm.ChQuit():
-			ub.stop()
+		case <-gn.gm.ChKick():
+			gn.kick()
+		case <-gn.gm.ChQuit():
+			gn.stop()
 			return
-		case pd := <-ub.gm.ChPauseDuration():
-			ub.pauseDuration = pd
-		case g := <-ub.gm.ChGravity():
-			ub.gravity = g
-		case b := <-ub.gm.ChIncomingBall():
+		case pd := <-gn.gm.ChPauseDuration():
+			gn.pauseDuration = pd
+		case g := <-gn.gm.ChGravity():
+			gn.gravity = g
+		case b := <-gn.gm.ChIncomingBall():
 			nx := b.GetPos().X
 			if nx == config.MagicX {
 				// Ball came in from center of top
-				nx = ub.scn.Width() / 2.0
+				nx = gn.scn.Width() / 2.0
 			} else if nx >= 0 && nx <= fuzzyZero {
 				// Ball came in from left.
 				nx = 0
 			} else {
 				// Ball came in from right.
-				nx = ub.scn.Width()
+				nx = gn.scn.Width()
 			}
 			// Assume Y component normalized before teleport.
-			ny := b.GetPos().Y * ub.scn.Height()
+			ny := b.GetPos().Y * gn.scn.Height()
 			b.SetPos(nx, ny)
 			// TODO: Adjust velocity per refraction-like rules?
-			ub.balls = append(ub.balls, b)
-		case dc := <-ub.gm.ChDoorCommand():
-			ub.handleDoor(dc)
+			gn.balls = append(gn.balls, b)
+		case dc := <-gn.gm.ChDoorCommand():
+			gn.handleDoor(dc)
 		case event := <-a.Events():
 			switch e := app.Filter(event).(type) {
 			case lifecycle.Event:
 				switch e.Crosses(lifecycle.StageVisible) {
 				case lifecycle.CrossOn:
-					if !ub.isAlive {
+					if !gn.isAlive {
 						// Calls v23.Init(), determines current players from MT, etc.
-						if !ub.gm.IsReadyToRun(false) {
+						if !gn.gm.IsReadyToRun(false) {
 							return
 						}
-						ub.start()
+						gn.start()
 					}
 				case lifecycle.CrossOff:
-					ub.stop()
+					gn.stop()
 					return
 				}
 			case paint.Event:
-				if !ub.isAlive {
+				if !gn.isAlive {
 					log.Panic("Not alive, yet told to paint")
 				}
-				ub.moveBalls()
-				ub.scn.Paint(ub.balls)
+				gn.moveBalls()
+				gn.scn.Paint(gn.balls)
 				a.EndPaint(e)
 			case key.Event: // Aspirationally use keys
-				if ub.chatty {
+				if gn.chatty {
 					log.Printf("Key event! %T = %v", e.Code, e.Code)
 				}
 				switch e.Code {
 				case key.CodeQ:
-					ub.stop()
+					gn.stop()
 					return
 				case key.CodeEscape:
-					ub.stop()
+					gn.stop()
 					return
 				}
 			case touch.Event:
-				if ub.chatty {
+				if gn.chatty {
 					log.Println("Touch event")
 				}
 				switch e.Type {
 				case touch.TypeBegin:
 					holdCount = 1
-					ub.beginX = e.X
-					ub.beginY = e.Y
+					gn.beginX = e.X
+					gn.beginY = e.Y
 					if e.X < magicButtonSideLength && e.Y < magicButtonSideLength {
-						if ub.chatty {
+						if gn.chatty {
 							log.Printf("Touched shutdown spot.\n")
 						}
-						ub.stop()
+						gn.stop()
 						return
 					}
 				case touch.TypeMove:
 					holdCount++
 				case touch.TypeEnd:
-					if ub.chatty {
+					if gn.chatty {
 						log.Printf("holdcount = %d", holdCount)
 					}
 					if holdCount > 0 && holdCount <= maxHoldCount {
 						// If they hold on too long, ignore it.
-						dx := float64(e.X - ub.beginX)
-						dy := float64(e.Y - ub.beginY)
+						dx := float64(e.X - gn.beginX)
+						dy := float64(e.Y - gn.beginY)
 						mag := math.Sqrt(dx*dx + dy*dy)
 						if mag >= minDragLength {
-							ndx := float32(dx/mag) * ub.scn.Width() / ub.pauseDuration
-							ndy := float32(dy/mag) * ub.scn.Height() / ub.pauseDuration
+							ndx := float32(dx/mag) * gn.scn.Width() / gn.pauseDuration
+							ndy := float32(dy/mag) * gn.scn.Height() / gn.pauseDuration
 							b := model.NewBall(nil,
-								model.Vec{ub.beginX, ub.beginY},
+								model.Vec{gn.beginX, gn.beginY},
 								model.Vec{ndx, ndy})
-							if ub.chatty {
+							if gn.chatty {
 								log.Printf("Sending impulse: %s", b.String())
 							}
-							ub.applyImpulse(b)
+							gn.applyImpulse(b)
 						} else {
-							if ub.chatty {
+							if gn.chatty {
 								log.Printf("Mag only %.4f", mag)
 							}
 						}
@@ -269,20 +269,20 @@ func (ub *Interpreter) Run(a app.App) {
 				// same amount of time to traverse the screen regardless of
 				// the size.
 				sz = e
-				ub.scn.ReSize(float32(sz.WidthPx), float32(sz.HeightPx))
-				ub.resetImpulseLimit()
-				if ub.chatty && debugShowResizes {
+				gn.scn.ReSize(float32(sz.WidthPx), float32(sz.HeightPx))
+				gn.resetImpulseLimit()
+				if gn.chatty && debugShowResizes {
 					log.Printf(
 						"Resize new w=%.2f, new h=%.2f, maxDsqImpulse = %f.2",
-						ub.scn.Width(),
-						ub.scn.Height(),
-						ub.maxDistSqForImpulse)
+						gn.scn.Width(),
+						gn.scn.Height(),
+						gn.maxDistSqForImpulse)
 				}
-				if !ub.firstResizeDone {
-					ub.firstResizeDone = true
+				if !gn.firstResizeDone {
+					gn.firstResizeDone = true
 					// Don't place the first ball till size is known.
-					if ub.numBallsCreated < 1 && ub.gm.IsRunning() {
-						ub.createBall()
+					if gn.numBallsCreated < 1 && gn.gm.IsRunning() {
+						gn.createBall()
 					}
 				}
 			}
@@ -290,37 +290,37 @@ func (ub *Interpreter) Run(a app.App) {
 	}
 }
 
-func (ub *Interpreter) minVelocity() float32 {
-	return ub.pixelsToCrossDuringPause / ub.pauseDuration
+func (gn *Engine) minVelocity() float32 {
+	return gn.pixelsToCrossDuringPause / gn.pauseDuration
 }
 
-func (ub *Interpreter) kick() {
-	if ub.chatty {
+func (gn *Engine) kick() {
+	if gn.chatty {
 		log.Print("Kicking.")
 	}
-	for _, b := range ub.balls {
-		//	b.SetVel(0, ub.minVelocity())
-		b.SetVel(0, ub.scn.Height()/ub.pauseDuration)
+	for _, b := range gn.balls {
+		//	b.SetVel(0, gn.minVelocity())
+		b.SetVel(0, gn.scn.Height()/gn.pauseDuration)
 	}
 }
 
-func (ub *Interpreter) left() {
-	for _, b := range ub.balls {
-		b.SetVel(-ub.scn.Width()/ub.pauseDuration, 0)
+func (gn *Engine) left() {
+	for _, b := range gn.balls {
+		b.SetVel(-gn.scn.Width()/gn.pauseDuration, 0)
 	}
 }
 
-func (ub *Interpreter) right() {
-	for _, b := range ub.balls {
-		b.SetVel(ub.scn.Width()/ub.pauseDuration, 0)
+func (gn *Engine) right() {
+	for _, b := range gn.balls {
+		b.SetVel(gn.scn.Width()/gn.pauseDuration, 0)
 	}
 }
 
-func (ub *Interpreter) freeze() {
-	if ub.chatty {
+func (gn *Engine) freeze() {
+	if gn.chatty {
 		log.Print("Freezing.")
 	}
-	for _, b := range ub.balls {
+	for _, b := range gn.balls {
 		b.SetVel(0, 0)
 	}
 }
@@ -334,13 +334,13 @@ func randNorm() float64 {
 	return two * (rand.Float64() - half)
 }
 
-func (ub *Interpreter) random() {
-	if ub.chatty {
+func (gn *Engine) random() {
+	if gn.chatty {
 		log.Print("Assigning random velocities.")
 	}
-	coefX := float64(ub.scn.Width() / ub.pauseDuration)
-	coefY := float64(ub.scn.Height() / ub.pauseDuration)
-	for _, b := range ub.balls {
+	coefX := float64(gn.scn.Width() / gn.pauseDuration)
+	coefY := float64(gn.scn.Height() / gn.pauseDuration)
+	for _, b := range gn.balls {
 		b.SetVel(float32(coefX*randNorm()), float32(coefY*randNorm()))
 	}
 }
@@ -355,32 +355,32 @@ func (ub *Interpreter) random() {
 // Screen center is (width/2, height/2).
 // The width and height come in as integers - but they
 // seem to be in the same units (pixels).
-func (ub *Interpreter) moveBalls() {
+func (gn *Engine) moveBalls() {
 	discardPile := []discardable{}
-	velX0 := ub.scn.Width() / ub.pauseDuration
-	velY0 := ub.scn.Height() / ub.pauseDuration
-	for i, b := range ub.balls {
+	velX0 := gn.scn.Width() / gn.pauseDuration
+	velY0 := gn.scn.Height() / gn.pauseDuration
+	for i, b := range gn.balls {
 		dx := b.GetVel().X
-		dy := b.GetVel().Y + ub.gravity
+		dy := b.GetVel().Y + gn.gravity
 
 		nx := b.GetPos().X + dx*velX0
 		ny := b.GetPos().Y + dy*velY0
 		if nx <= 0 {
 			// Ball hit left side of screen.
-			if ub.leftDoor == model.Open {
+			if gn.leftDoor == model.Open {
 				nx = 1
 				discardPile = append(discardPile, discardable{i, model.Left})
 			} else {
 				nx = 0
 				dx = -dx
 			}
-		} else if nx >= ub.scn.Width() {
+		} else if nx >= gn.scn.Width() {
 			// Ball hit right side of screen.
-			if ub.rightDoor == model.Open {
+			if gn.rightDoor == model.Open {
 				nx = 0
 				discardPile = append(discardPile, discardable{i, model.Right})
 			} else {
-				nx = ub.scn.Width()
+				nx = gn.scn.Width()
 				dx = -dx
 			}
 		}
@@ -388,47 +388,47 @@ func (ub *Interpreter) moveBalls() {
 			// Ball hit top of screen.
 			ny = 0
 			dy = -dy
-		} else if ny >= ub.scn.Height() {
+		} else if ny >= gn.scn.Height() {
 			// Ball hit bottom of screen.
-			ny = ub.scn.Height()
+			ny = gn.scn.Height()
 			dy = -dy
 		}
 		b.SetPos(nx, ny)
 		b.SetVel(dx, dy)
 	}
-	if ub.chatty {
+	if gn.chatty {
 		if len(discardPile) > 0 {
 			log.Printf("%d balls need to move off screen.", len(discardPile))
 		}
 	}
-	ub.throwBalls(discardPile)
+	gn.throwBalls(discardPile)
 }
 
-func (ub *Interpreter) throwBalls(discardPile []discardable) {
+func (gn *Engine) throwBalls(discardPile []discardable) {
 	count := 0
 	for _, discard := range discardPile {
 		i := discard.i - count
-		if ub.chatty {
+		if gn.chatty {
 			log.Printf("Throwing ball %v (i=%d, k=%d, count=%d).\n",
 				discard.d, i, discard.i, count)
 		}
 		count++
-		b := ub.balls[i]
-		if ub.chatty {
+		b := gn.balls[i]
+		if gn.chatty {
 			log.Printf("  ball = %v\n", b)
 		}
-		ub.balls = append(ub.balls[:i], ub.balls[i+1:]...)
-		ub.throwOneBall(b, discard.d)
+		gn.balls = append(gn.balls[:i], gn.balls[i+1:]...)
+		gn.throwOneBall(b, discard.d)
 	}
 }
 
-func (ub *Interpreter) throwOneBall(b *model.Ball, direction model.Direction) {
+func (gn *Engine) throwOneBall(b *model.Ball, direction model.Direction) {
 	// Before throwing, normalize the Y coordinate to a dimensionless
 	// percentage.  Recipient converts it based on their own dimensions,
 	// so that if the ball left one tenth of the way up the screen, it
 	// enters the next screen at the same relative position.
-	b.SetPos(b.GetPos().X, b.GetPos().Y/ub.scn.Height())
-	ub.chBallCommand <- model.BallCommand{b, direction}
+	b.SetPos(b.GetPos().X, b.GetPos().Y/gn.scn.Height())
+	gn.chBallCommand <- model.BallCommand{b, direction}
 }
 
 type discardable struct {
@@ -436,28 +436,28 @@ type discardable struct {
 	d model.Direction
 }
 
-func (ub *Interpreter) discardBalls() {
-	if ub.leftDoor == model.Closed && ub.rightDoor == model.Closed {
+func (gn *Engine) discardBalls() {
+	if gn.leftDoor == model.Closed && gn.rightDoor == model.Closed {
 		// Nowhere to discard balls.
 		return
 	}
-	minVelocity := ub.minVelocity()
+	minVelocity := gn.minVelocity()
 	discardPile := []discardable{}
-	for i, b := range ub.balls {
+	for i, b := range gn.balls {
 		vx := b.GetVel().X
 		vy := b.GetVel().Y
 		nx := b.GetPos().X
 		if vx < 0 {
 			// Try to discard to left.
-			if ub.leftDoor == model.Open {
+			if gn.leftDoor == model.Open {
 				discardPile = append(discardPile, discardable{i, model.Left})
 				// Ball should appear on right side of place it flies to.
-				nx = ub.scn.Width()
+				nx = gn.scn.Width()
 				if -vx < minVelocity {
 					vx = -minVelocity
 				}
 			} else {
-				if ub.rightDoor == model.Open {
+				if gn.rightDoor == model.Open {
 					discardPile = append(discardPile, discardable{i, model.Right})
 					nx = 0
 					// Make ball go right.
@@ -470,16 +470,16 @@ func (ub *Interpreter) discardBalls() {
 			}
 		} else {
 			// vx non-negative, try to discard right.
-			if ub.rightDoor == model.Open {
+			if gn.rightDoor == model.Open {
 				discardPile = append(discardPile, discardable{i, model.Right})
 				nx = 0
 				if vx < minVelocity {
 					vx = minVelocity
 				}
 			} else {
-				if ub.leftDoor == model.Open {
+				if gn.leftDoor == model.Open {
 					discardPile = append(discardPile, discardable{i, model.Left})
-					nx = ub.scn.Width()
+					nx = gn.scn.Width()
 				}
 				// Make ball go left.
 				if vx < minVelocity {
@@ -497,77 +497,77 @@ func (ub *Interpreter) discardBalls() {
 		b.SetVel(vx, vy)
 	}
 
-	if ub.chatty {
+	if gn.chatty {
 		if len(discardPile) > 0 {
 			log.Printf("%d balls to discard.", len(discardPile))
 		}
 	}
-	ub.throwBalls(discardPile)
-	ub.balls = []*model.Ball{}
+	gn.throwBalls(discardPile)
+	gn.balls = []*model.Ball{}
 }
 
-func (ub *Interpreter) createBall() {
-	if ub.chatty {
+func (gn *Engine) createBall() {
+	if gn.chatty {
 		log.Printf("Creating ball.")
 	}
-	ub.balls = append(
-		ub.balls,
+	gn.balls = append(
+		gn.balls,
 		model.NewBall(
-			ub.gm.Me(),
-			model.Vec{ub.scn.Width() / 2, ub.scn.Height() / 2},
+			gn.gm.Me(),
+			model.Vec{gn.scn.Width() / 2, gn.scn.Height() / 2},
 			model.Vec{0, 0}))
-	// Since balls can come in from the outside,  len(ub.balls) is
+	// Since balls can come in from the outside,  len(gn.balls) is
 	// not a reliable indicated of how many balls this code created,
 	// so need a distinct counter.
-	ub.numBallsCreated++
+	gn.numBallsCreated++
 }
 
 // Use fraction of characteristic screen size
 // to define max distance over which an impulse
 // is considered to have 'hit' a ball.
-func (ub *Interpreter) resetImpulseLimit() {
-	max := ub.scn.Height()
-	if ub.scn.Width() > max {
-		max = ub.scn.Width()
+func (gn *Engine) resetImpulseLimit() {
+	max := gn.scn.Height()
+	if gn.scn.Width() > max {
+		max = gn.scn.Width()
 	}
 	max = max / 3
-	ub.maxDistSqForImpulse = max * max
+	gn.maxDistSqForImpulse = max * max
 }
 
 // Find the ball closest to the impulse and within a reasonable
 // range, apply new velocity to the ball.
-func (ub *Interpreter) applyImpulse(impulse *model.Ball) {
-	if ub.chatty {
+func (gn *Engine) applyImpulse(impulse *model.Ball) {
+	if gn.chatty {
 		log.Printf("Got impulse: %s", impulse.String())
 	}
-	closest, ball := ub.closestDsq(impulse.GetPos())
+	closest, ball := gn.closestDsq(impulse.GetPos())
 	if ball == nil {
-		if ub.chatty {
+		if gn.chatty {
 			log.Printf("No ball to punch.")
 		}
 		return
 	}
-	if ub.chatty {
+	if gn.chatty {
 		log.Printf("DSQ to ball: %f.1\n", closest)
 	}
-	if closest <= ub.maxDistSqForImpulse {
-		if ub.chatty {
+	if closest <= gn.maxDistSqForImpulse {
+		if gn.chatty {
 			log.Printf("Punching ball.\n")
 		}
 		ball.SetVel(impulse.GetVel().X, impulse.GetVel().Y)
 	} else {
-		if ub.chatty {
+		if gn.chatty {
 			log.Printf("Ball further than %f.1\n",
-				ub.maxDistSqForImpulse)
+				gn.maxDistSqForImpulse)
 		}
 	}
 }
 
-func (ub *Interpreter) closestDsq(im model.Vec) (
+func (gn *Engine) closestDsq(im model.Vec) (
 	smallest float32, target *model.Ball) {
 	smallest = math.MaxFloat32
 	target = nil
-	for _, b := range ub.balls {
+	for _, b := range gn.balls {
 		dx := im.X - b.GetPos().X
 		dy := im.Y - b.GetPos().Y
 		dsq := dx*dx + dy*dy
@@ -579,21 +579,21 @@ func (ub *Interpreter) closestDsq(im model.Vec) (
 	return
 }
 
-func (ub *Interpreter) handleDoor(dc model.DoorCommand) {
-	if ub.chatty {
+func (gn *Engine) handleDoor(dc model.DoorCommand) {
+	if gn.chatty {
 		log.Printf("Received door command: %v", dc)
 	}
 	if dc.S == model.Open {
 		if dc.D == model.Left {
-			ub.leftDoor = model.Open
+			gn.leftDoor = model.Open
 		} else {
-			ub.rightDoor = model.Open
+			gn.rightDoor = model.Open
 		}
 	} else {
 		if dc.D == model.Left {
-			ub.leftDoor = model.Closed
+			gn.leftDoor = model.Closed
 		} else {
-			ub.rightDoor = model.Closed
+			gn.rightDoor = model.Closed
 		}
 	}
 }
