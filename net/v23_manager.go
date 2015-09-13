@@ -22,6 +22,8 @@ import (
 	"log"
 	"math"
 	"math/rand"
+	"sync"
+
 	"net/http"
 	"regexp"
 	"sort"
@@ -59,18 +61,21 @@ type V23Manager struct {
 	chStop               chan chan bool           // Owned, read from.
 	chNoNewBallsOrPeople chan chan bool           // Owned, read from.
 	chDoorCommand        chan model.DoorCommand   // Owned, written to.
+	mu                   *sync.RWMutex
+	isReady              bool
 }
 
 func NewV23Manager(
 	chatty bool,
 	rootName string,
+	isGameMaster bool,
 	namespaceRoot string) *V23Manager {
 	return &V23Manager{
 		chatty,
 		nil,          // ctx
 		nil,          // shutdown
 		false,        // isRunning
-		false,        // isGameMaster
+		isGameMaster, // isGameMaster
 		model.Closed, // left door
 		model.Closed, // right door
 		rootName,
@@ -84,6 +89,8 @@ func NewV23Manager(
 		make(chan chan bool), // chStop
 		make(chan chan bool), // chNoNewBallsOrPeople
 		make(chan model.DoorCommand),
+		new(sync.RWMutex),
+		false,
 	}
 }
 
@@ -127,12 +134,34 @@ func (gm *V23Manager) IsRunning() bool {
 	return gm.isRunning
 }
 
-// Return true if ready to call Run
-func (gm *V23Manager) IsReadyToRun(isGameMaster bool) bool {
-	if config.FailFast && !gotNetwork() {
-		return false
+// GetReady returns a bool channel.  The channel will get one datum
+// during it's life.  If the datum is true, the manager is ready, if
+// the datum is false, the manager will never be ready within the
+// contraints of its own timeouts.  The client can call Ready multiple
+// times, but secondary calls might block.
+func (gm *V23Manager) GetReady() <-chan bool {
+	gm.mu.Lock()
+	ch := make(chan bool)
+	if gm.isReady {
+		go func() {
+			ch <- true
+		}()
+		gm.mu.Unlock()
+		return ch
 	}
-	gm.isGameMaster = isGameMaster
+	if config.FailFast && !gotNetwork() {
+		go func() {
+			ch <- false
+		}()
+		gm.mu.Unlock()
+		return ch
+	}
+	go gm.getReadyToRun(ch)
+	return ch
+}
+
+func (gm *V23Manager) getReadyToRun(ch chan bool) {
+	defer gm.mu.Unlock()
 	if gm.chatty {
 		log.Printf("Calling v23.Init")
 	}
@@ -165,7 +194,9 @@ func (gm *V23Manager) IsReadyToRun(isGameMaster bool) bool {
 		if gm.chatty {
 			log.Printf("I am game master.")
 		}
-		return true
+		gm.isReady = true
+		ch <- true
+		return
 	}
 	if gm.chatty {
 		log.Printf("I am player %v\n", gm.myself)
@@ -180,9 +211,11 @@ func (gm *V23Manager) IsReadyToRun(isGameMaster bool) bool {
 	err := s.Serve(myName, ifc.GameServiceServer(gm.relay), MakeAuthorizer())
 	if err != nil {
 		log.Panic("Error serving relay: ", err)
-		return false
+		ch <- false
+		return
 	}
-	return true
+	gm.isReady = true
+	ch <- true
 }
 
 func (gm *V23Manager) ChDoorCommand() <-chan model.DoorCommand {
@@ -505,7 +538,7 @@ func (gm *V23Manager) playerNumbers() (list []int) {
 		}
 	}
 	if gm.chatty {
-		log.Printf("Glob result channel exhausted.")
+		log.Printf("Finished processing glob response.")
 	}
 	return
 }

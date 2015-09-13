@@ -18,7 +18,7 @@ func main() {
 		engine.NewEngine(
 			config.Chatty,
 			net.NewV23Manager(
-				config.Chatty, config.RootName, nsRoot),
+				config.Chatty, config.RootName, false, nsRoot),
 			screen.NewScreen(),
 		).Run(a)
 	})

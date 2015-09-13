@@ -13,6 +13,7 @@ import (
 	"log"
 	"math"
 	"math/rand"
+	"time"
 )
 
 const (
@@ -29,8 +30,6 @@ type Engine struct {
 	isAlive             bool
 	maxDistSqForImpulse float32
 	gravity             float32
-	numBallsCreated     int
-	firstResizeDone     bool
 	vm                  model.NetManager
 	scn                 model.Screen
 	chatty              bool
@@ -66,9 +65,7 @@ func NewEngine(
 	return &Engine{
 		false, // isAlive
 		defaultMaxDistSqForImpulse,
-		0,     // gravity
-		0,     // numBallsCreated
-		false, // firstResizeDone
+		0, // gravity
 		vm,
 		scn,
 		chatty,
@@ -84,25 +81,6 @@ func NewEngine(
 
 func (gn *Engine) String() string {
 	return fmt.Sprintf("%v %v", gn.vm.Me(), gn.balls)
-}
-
-func (gn *Engine) start() {
-	if gn.chatty {
-		log.Printf("Engine starting.\n")
-	}
-	gn.scn.Start()
-
-	gn.vm.RunPrep(gn.chBallCommand)
-	go gn.vm.Run()
-
-	if gn.firstResizeDone && gn.numBallsCreated < 1 {
-		gn.createBall()
-	}
-
-	gn.isAlive = true
-	if gn.chatty {
-		log.Printf("Engine started.\n")
-	}
 }
 
 func (gn *Engine) stop() {
@@ -129,14 +107,94 @@ func (gn *Engine) stop() {
 	}
 }
 
+type readyEvent int
+
+const (
+	readyResize readyEvent = iota
+	readyCycleOn
+)
+
+func (gn *Engine) getReady(chEvent chan readyEvent) chan bool {
+	ch := make(chan bool)
+	go func() {
+		// Calls v23.Init(), determines current players from MT, etc.
+		vmReadyCh := gn.vm.GetReady()
+		gotVm := false
+		gotResize := false
+		gotCycleOn := false
+
+		for {
+			select {
+			case <-time.After(5 * time.Second):
+				if gn.chatty {
+					log.Printf("Ready loop timed out.\n")
+				}
+				ch <- false
+				return
+			case ready := <-vmReadyCh:
+				if !ready {
+					log.Printf("Seem unable to start VM.\n")
+					ch <- false
+					return
+				}
+				gn.vm.RunPrep(gn.chBallCommand)
+				go gn.vm.Run()
+				if gn.chatty {
+					log.Printf("VM now running.\n")
+				}
+				vmReadyCh = nil
+				gotVm = true
+			case event := <-chEvent:
+				switch event {
+				case readyResize:
+					gotResize = true
+				case readyCycleOn:
+					gotCycleOn = true
+				}
+			}
+			if gotVm && gotResize && gotCycleOn {
+				ch <- true
+				return
+			}
+		}
+	}()
+	return ch
+}
+
 func (gn *Engine) Run(a app.App) {
 	if gn.chatty {
 		log.Println("Starting gn Run.")
 	}
 	holdCount := 0
+	chWaiting := make(chan readyEvent)
+	chIsReady := gn.getReady(chWaiting)
 	var sz size.Event
 	for {
+		if false && gn.chatty {
+			log.Printf(" ")
+			log.Printf(" ")
+			log.Printf("Re-entering select.")
+		}
 		select {
+		case ready := <-chIsReady:
+			log.Printf("Got ready signal = %v", ready)
+			if !ready {
+				if gn.chatty {
+					log.Printf("Unable to get ready - exiting.")
+				}
+				return
+			}
+			chIsReady = nil
+			chWaiting = nil
+			gn.scn.Start()
+			if gn.chatty {
+				log.Printf("Started screen.")
+			}
+			gn.createBall()
+			gn.isAlive = true
+			if gn.chatty {
+				log.Printf("Seem to be alive now.")
+			}
 		case mc := <-gn.vm.ChMasterCommand():
 			switch mc.Name {
 			case "kick":
@@ -187,23 +245,22 @@ func (gn *Engine) Run(a app.App) {
 			case lifecycle.Event:
 				switch e.Crosses(lifecycle.StageVisible) {
 				case lifecycle.CrossOn:
-					if !gn.isAlive {
-						// Calls v23.Init(), determines current players from MT, etc.
-						if !gn.vm.IsReadyToRun(false) {
-							return
-						}
-						gn.start()
+					if chWaiting == nil {
+						log.Print("Lifecycle trouble")
+						return
 					}
+					log.Print("Passing cycleOn")
+					chWaiting <- readyCycleOn
+					log.Print("Passed cycleOn")
 				case lifecycle.CrossOff:
 					gn.stop()
 					return
 				}
 			case paint.Event:
-				if !gn.isAlive {
-					log.Panic("Not alive, yet told to paint")
+				if gn.isAlive {
+					gn.moveBalls()
+					gn.scn.Paint(gn.balls)
 				}
-				gn.moveBalls()
-				gn.scn.Paint(gn.balls)
 				a.EndPaint(e)
 			case key.Event: // Aspirationally use keys
 				if gn.chatty {
@@ -276,11 +333,13 @@ func (gn *Engine) Run(a app.App) {
 						gn.scn.Height(),
 						gn.maxDistSqForImpulse)
 				}
-				if !gn.firstResizeDone {
-					gn.firstResizeDone = true
-					// Don't place the first ball till size is known.
-					if gn.numBallsCreated < 1 && gn.vm.IsRunning() {
-						gn.createBall()
+				if chWaiting != nil {
+					if gn.chatty {
+						log.Printf("passing readyResize")
+					}
+					chWaiting <- readyResize
+					if gn.chatty {
+						log.Printf("passed readyResize")
 					}
 				}
 			}
@@ -514,10 +573,9 @@ func (gn *Engine) createBall() {
 			gn.vm.Me(),
 			model.Vec{gn.scn.Width() / 2, gn.scn.Height() / 2},
 			model.Vec{0, 0}))
-	// Since balls can come in from the outside,  len(gn.balls) is
-	// not a reliable indicated of how many balls this code created,
-	// so need a distinct counter.
-	gn.numBallsCreated++
+	if gn.chatty {
+		log.Printf("Created ball.")
+	}
 }
 
 // Use fraction of characteristic screen size

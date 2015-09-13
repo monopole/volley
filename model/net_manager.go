@@ -6,7 +6,7 @@ import (
 
 type NetManager interface {
 	IsRunning() bool
-	IsReadyToRun(isGameMaster bool) bool
+	GetReady() <-chan bool
 	ChDoorCommand() <-chan DoorCommand
 	ChMasterCommand() <-chan ifc.MasterCommand
 	ChKick() <-chan bool

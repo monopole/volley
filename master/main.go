@@ -17,7 +17,7 @@ func main() {
 	nsRoot := "/" + net.DetermineNamespaceRoot()
 	log.Printf("Using v23.namespace.root=%s", nsRoot)
 	gm := net.NewV23Manager(
-		config.Chatty, config.RootName, nsRoot)
+		config.Chatty, config.RootName, true, nsRoot)
 	if !gm.IsReadyToRun(true) {
 		if config.Chatty {
 			log.Printf("gm not ready!")
