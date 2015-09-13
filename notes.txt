@@ -1,3 +1,6 @@
+TODO:  pass reley directly to engine, so it doesn't have to pass everything
+through.
+
 VOLLEY
 	app.Main(func(a app.App) {
 		nsRoot := "/" + game.DetermineNamespaceRoot()
