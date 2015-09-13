@@ -35,30 +35,45 @@ NEW MAIN VOLLEY
 
   make a new manager
 
-  call a method on it that will return a channel that contains an instance of Relay
-  that method should turn right away, but it should fire off a routine that 
-  won't write to the channel till the relay is ready.
+  Call a method on it that will return a channel that contains an
+  instance of Relay that method should turn right away, but it should
+  fire off a routine that won't write to the channel till the relay is
+  ready.  Relay is then wrapped v23 server that converts incoming RPCs
+  to data on channels.
 
-  pass the channel into the engine, along with the manager?  No.
-  inside the engine, the vmanager is rarely used.  It is used only to
+  Inside the engine, the vmanager is called to 
+    call IsReadyToRun - which calls v23.init, etc.
+    call RunPrep (sends in 'throw ball channel) - , then go Run.
+    call isRunning, before creating first ball, so we know startup worked.
+    get Me, for printing and creating balls
+    get channels with incoming data, e.g. MasterCommand, quit, pause, gravity
+    call NoNewDoorsOrPeople
+    call Stop
+
+
+
     * send the ballCommand channel as a final step to starting.
+      That's how the engine tells the net stuff to throw a ball left or right.
+
     * call Run, so the engine tells rthe vm to enter its execute loop.
+
     * the engine tels the vm to stop accepting new balls or people, and tells
       it to stop.
+
     * the engine listens for commands from the vm, e.g. kick, freeze, etc.
+
     * engine listens for incoming balls.
+
     * door commands (because a player left)
+
     * in engine lifecycke on, the vm is asked if its ready to run, which is stupid,
       since a relay coming in on a channel woulld say the same thing
+
     * on a resize event, the vm is asked if it is running and if there are no
       balls, and it creates an event.
+
     * the engine asks the vm 'who am i', so it can create a ball for itself
       it would be better to ask the vm for a balll instead.
-
-
-
-
-
 
 
 game
@@ -68,7 +83,9 @@ game
  v23_manager
 
     life cycle on does the following
-       IsReadyToRun (can be called repeateldy, to see if stuff is up)
+       IsReadyToRun
+       Can be called repeateldy, to see if stuff is up - but that's dumb,it should
+       send something on a channel.
          * v23.Init, store shutdown function
          * v23.GetNamespace.setroots
          * glob the namespace for players,
