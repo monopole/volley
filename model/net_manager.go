@@ -1,22 +1,13 @@
 package model
 
-import (
-	"github.com/monopole/croupier/ifc"
-)
-
 type NetManager interface {
 	IsRunning() bool
+	GetRelay() Zelay
 	GetReady() <-chan bool
 	ChDoorCommand() <-chan DoorCommand
-	ChMasterCommand() <-chan ifc.MasterCommand
 	ChKick() <-chan bool
-	ChPauseDuration() <-chan float32
-	ChGravity() <-chan float32
-	ChIncomingBall() <-chan *Ball
-	ChQuit() <-chan bool
 	Me() *Player
-	RunPrep(chBc <-chan BallCommand)
-	Run()
+	JoinGame(chBc <-chan BallCommand)
 	Quit(id int)
 	List()
 	FireBall(count int)

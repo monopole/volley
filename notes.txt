@@ -33,11 +33,17 @@ MASTER
 
 NEW MAIN VOLLEY
 
+
+ Three async events have to happen before creating the fris
+  get a v23 manager up
+  get the app to 'on'
+  get a resize event
+
   make a new manager
 
   Call a method on it that will return a channel that contains an
   instance of Relay that method should turn right away, but it should
-  fire off a routine that won't write to the channel till the relay is
+  fire off a rutine that won't write to the channel till the relay is
   ready.  Relay is then wrapped v23 server that converts incoming RPCs
   to data on channels.
 
