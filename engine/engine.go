@@ -3,6 +3,7 @@ package engine
 import (
 	"fmt"
 	"github.com/monopole/croupier/config"
+	"github.com/monopole/croupier/ifc"
 	"github.com/monopole/croupier/model"
 	"golang.org/x/mobile/app"
 	"golang.org/x/mobile/event/key"
@@ -138,8 +139,17 @@ func (gn *Engine) Run(a app.App) {
 	if gn.chatty {
 		log.Println("Starting gn Run.")
 	}
-	var hoser model.Zelay
-	hoser = gn.nm.GetRelay()
+
+	// TODO(monopole): Send these into App somehow, so
+	// the select below can be collapse to just a switch
+	// on app events.
+
+	var chMasterCommand <-chan ifc.MasterCommand
+	var chPauseDuration <-chan float32
+	var chGravity <-chan float32
+	var chIncomingBall <-chan *model.Ball
+	var chQuit <-chan bool
+
 	holdCount := 0
 	chWaiting := make(chan readyEvent)
 	chIsReady := gn.getReady(chWaiting)
@@ -152,6 +162,7 @@ func (gn *Engine) Run(a app.App) {
 		}
 		select {
 		case ready := <-chIsReady:
+			chIsReady = nil // Done with this channel.
 			log.Printf("Got ready signal = %v", ready)
 			if !ready {
 				if gn.chatty {
@@ -159,8 +170,13 @@ func (gn *Engine) Run(a app.App) {
 				}
 				return
 			}
-			chIsReady = nil
 			chWaiting = nil
+			relay := gn.nm.GetRelay()
+			chMasterCommand = relay.ChMasterCommand()
+			chPauseDuration = relay.ChPauseDuration()
+			chGravity = relay.ChGravity()
+			chIncomingBall = relay.ChIncomingBall()
+			chQuit = relay.ChQuit()
 			gn.scn.Start()
 			if gn.chatty {
 				log.Printf("Started screen.")
@@ -170,7 +186,7 @@ func (gn *Engine) Run(a app.App) {
 			if gn.chatty {
 				log.Printf("Seem to be alive now.")
 			}
-		case mc := <-hoser.ChMasterCommand():
+		case mc := <-chMasterCommand:
 			switch mc.Name {
 			case "kick":
 				gn.kick()
@@ -187,16 +203,14 @@ func (gn *Engine) Run(a app.App) {
 			default:
 				log.Print("Don't understand command %v", mc)
 			}
-		case <-gn.nm.ChKick():
-			gn.kick()
-		case <-hoser.ChQuit():
+		case <-chQuit:
 			gn.stop()
 			return
-		case pd := <-hoser.ChPauseDuration():
+		case pd := <-chPauseDuration:
 			gn.pauseDuration = pd
-		case g := <-hoser.ChGravity():
+		case g := <-chGravity:
 			gn.gravity = g
-		case b := <-hoser.ChIncomingBall():
+		case b := <-chIncomingBall:
 			nx := b.GetPos().X
 			if nx == config.MagicX {
 				// Ball came in from center of top

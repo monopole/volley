@@ -4,7 +4,7 @@ import (
 	"github.com/monopole/croupier/ifc"
 )
 
-type Zelay interface {
+type Relay interface {
 	ChMasterCommand() <-chan ifc.MasterCommand
 	ChPauseDuration() <-chan float32
 	ChGravity() <-chan float32

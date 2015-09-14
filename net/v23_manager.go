@@ -223,8 +223,8 @@ func (nm *V23Manager) ChDoorCommand() <-chan model.DoorCommand {
 	return nm.chDoorCommand
 }
 
-func (nm *V23Manager) GetRelay() model.Zelay {
-	return *nm.relay
+func (nm *V23Manager) GetRelay() model.Relay {
+	return nm.relay
 }
 
 func (nm *V23Manager) Me() *model.Player {
