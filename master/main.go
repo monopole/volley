@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/monopole/croupier/config"
-	"github.com/monopole/croupier/net"
+	"github.com/monopole/volley/config"
+	"github.com/monopole/volley/net"
 	"log"
 	"os"
 	"strconv"
+	"time"
 )
 
 func main() {
@@ -16,40 +17,51 @@ func main() {
 	}
 	nsRoot := "/" + net.DetermineNamespaceRoot()
 	log.Printf("Using v23.namespace.root=%s", nsRoot)
-	gm := net.NewV23Manager(
+	nm := net.NewV23Manager(
 		config.Chatty, config.RootName, true, nsRoot)
-	if !gm.IsReadyToRun(true) {
-		if config.Chatty {
-			log.Printf("gm not ready!")
-		}
+
+	chReady := nm.GetReady()
+
+	select {
+	case <-time.After(5 * time.Second):
+		log.Printf("Ready loop timed out.\n")
 		return
+	case ready := <-chReady:
+		if !ready {
+			log.Printf("Seem unable to start NM.\n")
+			return
+		}
 	}
-	gm.RunPrep(nil)
+	nm.JoinGame(nil)
+	if config.Chatty {
+		log.Printf("NM now running.\n")
+	}
+
 	switch os.Args[1] {
 	case "list":
-		gm.List()
+		nm.List()
 	case "mc":
 		if len(os.Args[2]) > 0 {
-			gm.DoMasterCommand(os.Args[2])
+			nm.DoMasterCommand(os.Args[2])
 		} else {
 			log.Println("Don't understand mc arg")
 		}
 	case "kick":
-		gm.Kick()
+		nm.Kick()
 	case "quit":
 		id, _ := strconv.Atoi(os.Args[2])
-		gm.Quit(id)
+		nm.Quit(id)
 	case "fire":
 		count, _ := strconv.Atoi(os.Args[2])
-		gm.FireBall(count)
+		nm.FireBall(count)
 	case "pause":
 		x, _ := strconv.ParseFloat(os.Args[2], 32)
 		pd := float32(x)
-		gm.SetPauseDuration(pd)
+		nm.SetPauseDuration(pd)
 	case "gravity":
 		x, _ := strconv.ParseFloat(os.Args[2], 32)
 		g := float32(x)
-		gm.SetGravity(g)
+		nm.SetGravity(g)
 	default:
 		log.Printf("Don't understand: %s\n", os.Args[1])
 	}
