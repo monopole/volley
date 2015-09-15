@@ -19,7 +19,6 @@ type Relay struct {
 	chForget        chan *model.Player
 	chBall          chan *model.Ball
 	chQuit          chan bool
-	chKick          chan bool
 	chMasterCommand chan ifc.MasterCommand
 	chPauseDuration chan float32
 	chGravity       chan float32
@@ -33,7 +32,6 @@ func MakeRelay() *Relay {
 	r.chForget = make(chan *model.Player)
 	r.chBall = make(chan *model.Ball)
 	r.chQuit = make(chan bool)
-	r.chKick = make(chan bool)
 	r.chMasterCommand = make(chan ifc.MasterCommand)
 	r.chPauseDuration = make(chan float32)
 	r.chGravity = make(chan float32)
@@ -51,6 +49,9 @@ func (r *Relay) StopAcceptingData() {
 		log.Printf("Relay: no more data...")
 	}
 	r.mu.Lock()
+	if config.Chatty {
+		log.Printf("Relay: got the lock.")
+	}
 	defer r.mu.Unlock()
 	r.acceptingData = false
 	// Closing the channel sends a nil, which unblocks, but the receiver
@@ -72,28 +73,24 @@ func (r *Relay) ChForget() <-chan *model.Player {
 	return r.chForget
 }
 
-func (r *Relay) ChIncomingBall() <-chan *model.Ball {
-	return r.chBall
+func (r *Relay) ChGravity() <-chan float32 {
+	return r.chGravity
 }
 
-func (r *Relay) ChQuit() <-chan bool {
-	return r.chQuit
+func (r *Relay) ChIncomingBall() <-chan *model.Ball {
+	return r.chBall
 }
 
 func (r *Relay) ChMasterCommand() <-chan ifc.MasterCommand {
 	return r.chMasterCommand
 }
 
-func (r *Relay) ChKick() <-chan bool {
-	return r.chKick
-}
-
 func (r *Relay) ChPauseDuration() <-chan float32 {
 	return r.chPauseDuration
 }
 
-func (r *Relay) ChGravity() <-chan float32 {
-	return r.chGravity
+func (r *Relay) ChQuit() <-chan bool {
+	return r.chQuit
 }
 
 func (r *Relay) DoMasterCommand(_ *context.T, _ rpc.ServerCall, mc ifc.MasterCommand) error {
@@ -153,27 +150,6 @@ func (r *Relay) SetGravity(_ *context.T, _ rpc.ServerCall, g float32) error {
 		} else {
 			if config.Chatty {
 				log.Printf("Relay: Discarding gravity.")
-			}
-		}
-	}()
-	return nil
-}
-
-func (r *Relay) Kick(_ *context.T, _ rpc.ServerCall) error {
-	go func() {
-		r.mu.Lock()
-		defer r.mu.Unlock()
-		if r.acceptingData {
-			if config.Chatty {
-				log.Printf("Relay: Got a kick!.")
-			}
-			r.chKick <- true
-			if config.Chatty {
-				log.Printf("Relay: Passed kick to ch.")
-			}
-		} else {
-			if config.Chatty {
-				log.Printf("Relay: Discarding kick request.")
 			}
 		}
 	}()

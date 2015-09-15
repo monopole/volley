@@ -142,13 +142,13 @@ gomobile init
 
 ## Install volley software
 
-Define a handy env var.
+Define a handy env var:
 
 ```
 GITDIR=github.com/monopole/volley
 ```
 
-Create and fill `$BERRY/src/github.com/monopole/volley`.
+Grab the volley source:
 
 ```
 go get -d $GITDIR
@@ -180,7 +180,7 @@ simply drop the firewall.
 
 E.g. on linux try this:
 ```
-sudo $BERRY/src/github.com/monopole/volley/dropFw.sh 
+sudo $BERRY/src/$GITDIR/dropFw.sh 
 ```
 On Mac, something like
 ```

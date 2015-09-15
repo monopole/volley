@@ -31,9 +31,6 @@ type GameService interface {
   // Quit
   Quit() error
 
-  // Kick everything.
-  Kick() error
-
   // Master command
   DoMasterCommand(c MasterCommand) error
 

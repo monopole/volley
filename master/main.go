@@ -46,8 +46,6 @@ func main() {
 		} else {
 			log.Println("Don't understand mc arg")
 		}
-	case "kick":
-		nm.Kick()
 	case "quit":
 		id, _ := strconv.Atoi(os.Args[2])
 		nm.Quit(id)

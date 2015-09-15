@@ -522,9 +522,9 @@ func (nm *V23Manager) JoinGame(chBc <-chan model.BallCommand) {
 		if chBc != nil {
 			log.Panic("game master should not have chBc")
 		}
-	} else {
-		nm.sayHelloToEveryone()
+		return
 	}
+	nm.sayHelloToEveryone()
 	nm.checkDoors()
 	go nm.run()
 	nm.isRunning = true
@@ -612,17 +612,6 @@ func (nm *V23Manager) DoMasterCommand(c string) {
 		}
 		if err := vp.c.DoMasterCommand(nm.ctx, mc, nm.rpcOpts); err != nil {
 			log.Panic("Command send failed; err=%v", err)
-		}
-	}
-}
-
-func (nm *V23Manager) Kick() {
-	for _, vp := range nm.players {
-		if nm.chatty {
-			log.Printf("Kicking  %v", vp)
-		}
-		if err := vp.c.Kick(nm.ctx, nm.rpcOpts); err != nil {
-			log.Panic("Kick failed; err=%v", err)
 		}
 	}
 }
