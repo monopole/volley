@@ -2,7 +2,7 @@ package screen
 
 import (
 	"encoding/binary"
-	"github.com/monopole/croupier/model"
+	"github.com/monopole/volley/model"
 	"golang.org/x/mobile/exp/f32"
 	"golang.org/x/mobile/exp/gl/glutil"
 	"golang.org/x/mobile/gl"

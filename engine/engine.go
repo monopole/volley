@@ -2,9 +2,9 @@ package engine
 
 import (
 	"fmt"
-	"github.com/monopole/croupier/config"
-	"github.com/monopole/croupier/ifc"
-	"github.com/monopole/croupier/model"
+	"github.com/monopole/volley/config"
+	"github.com/monopole/volley/ifc"
+	"github.com/monopole/volley/model"
 	"golang.org/x/mobile/app"
 	"golang.org/x/mobile/event/key"
 	"golang.org/x/mobile/event/lifecycle"

@@ -1,7 +1,9 @@
 # volley
 
 Go + mobile + GL + [v23](https://v.io).
+
 [Demo video](https://youtu.be/dk-5BkO_P14).
+
 To try v23, sign up [here](https://goo.gl/ETo8Mt).
 
 ## Install prerequisites
@@ -124,9 +126,6 @@ To try v23, sign up [here](https://goo.gl/ETo8Mt).
 
 Full instructions [here](https://v.io/installation/details.html), or try this:
 
-__Because of code mirror server failures, one may have to repeat these
-incantations a few times.__
-
 ```
 go get -d v.io/x/ref/...
 go install v.io/x/ref/cmd/...
@@ -143,21 +142,20 @@ gomobile init
 
 ## Install volley software
 
-Create and fill `$BERRY/src/github.com/monopole/volley`.
-
-_Ignore_ complaints about `No buildable Go source`.
+Define a handy env var.
 
 ```
 GITDIR=github.com/monopole/volley
 ```
 
-Grab the code:
+Create and fill `$BERRY/src/github.com/monopole/volley`.
+
 ```
 go get -d $GITDIR
 ```
 
-Generate the Go that was missing and build the v23 fortune server
-and client stuff.
+Ignore complaints about `No buildable Go source`; this is fixed by
+_generating_ some missing Go, used to flesh out the game RPC stubs:
 
 ```
 VDLROOT=$BERRY/src/v.io/v23/vdlroot \
@@ -180,7 +178,7 @@ In the exercise below, one must run a mounttable.  On the computer
 involved, or any other computers, forward ports appropriately or
 simply drop the firewall.
 
-E.g. on linux try this sledgehammer
+E.g. on linux try this:
 ```
 sudo $BERRY/src/github.com/monopole/volley/dropFw.sh 
 ```
@@ -214,7 +212,7 @@ sedPa="s/.*addr:(192\.168\.[0-9]+\.[0-9]+).*/\1/p"
 export MT_HOST=`ifconfig | grep "inet addr:192.168" | sed -rn $sedPa`
 ```
 
-Then make a full V23 root spec thus:
+Then make a full V23 namespace root spec thus:
 ```
 MT_PORT=23000
 

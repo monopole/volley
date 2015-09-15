@@ -14,10 +14,10 @@ package net
 
 import (
 	"fmt"
-	"github.com/monopole/croupier/config"
-	"github.com/monopole/croupier/ifc"
-	"github.com/monopole/croupier/model"
-	"github.com/monopole/croupier/relay"
+	"github.com/monopole/volley/config"
+	"github.com/monopole/volley/ifc"
+	"github.com/monopole/volley/model"
+	"github.com/monopole/volley/relay"
 	"io/ioutil"
 	"log"
 	"math"

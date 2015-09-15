@@ -3,10 +3,10 @@
 package main
 
 import (
-	"github.com/monopole/croupier/config"
-	"github.com/monopole/croupier/engine"
-	"github.com/monopole/croupier/net"
-	"github.com/monopole/croupier/screen"
+	"github.com/monopole/volley/config"
+	"github.com/monopole/volley/engine"
+	"github.com/monopole/volley/net"
+	"github.com/monopole/volley/screen"
 	"golang.org/x/mobile/app"
 	"log"
 )

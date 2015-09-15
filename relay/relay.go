@@ -5,9 +5,9 @@
 package relay
 
 import (
-	"github.com/monopole/croupier/config"
-	"github.com/monopole/croupier/ifc"
-	"github.com/monopole/croupier/model"
+	"github.com/monopole/volley/config"
+	"github.com/monopole/volley/ifc"
+	"github.com/monopole/volley/model"
 	"log"
 	"sync"
 	"v.io/v23/context"

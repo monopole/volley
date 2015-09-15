@@ -1,7 +1,7 @@
 package model
 
 import (
-	"github.com/monopole/croupier/ifc"
+	"github.com/monopole/volley/ifc"
 )
 
 type Relay interface {
