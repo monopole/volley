@@ -2,6 +2,7 @@ package engine
 
 import (
 	"fmt"
+	"runtime"
 	"github.com/monopole/volley/config"
 	"github.com/monopole/volley/ifc"
 	"github.com/monopole/volley/model"
@@ -18,50 +19,50 @@ import (
 )
 
 const (
-	// Start with generous slop.
+// Start with generous slop.
 	defaultMaxDistSqForImpulse = 5000
-	debugShowResizes           = false
-	maxHoldCount               = 30
-	magicButtonSideLength      = 100
-	fuzzyZero                  = 0.1
-	minDragLength              = 6
+	debugShowResizes = false
+	maxHoldCount = 30
+	magicButtonSideLength = 100
+	fuzzyZero = 0.1
+	minDragLength = 6
 )
 
 type Engine struct {
-	isAlive             bool
-	maxDistSqForImpulse float32
-	gravity             float32
-	nm                  model.NetManager
-	scn                 model.Screen
-	chatty              bool
-	balls               []*model.Ball
-	touchX              float32
-	touchY              float32
-	beginX              float32
-	beginY              float32
-	leftDoor            model.DoorState
-	rightDoor           model.DoorState
-	chBallCommand       chan model.BallCommand // Owned, written to.
-	// A time unit representing how much time (in some unspecified time
-	// unit) between each paint event.  Making this number smaller makes
-	// balls move faster.
-	pauseDuration float32
+	isAlive                  bool
+	maxDistSqForImpulse      float32
+	gravity                  float32
+	nm                       model.NetManager
+	scn                      model.Screen
+	chatty                   bool
+	balls                    []*model.Ball
+	touchX                   float32
+	touchY                   float32
+	beginX                   float32
+	beginY                   float32
+	leftDoor                 model.DoorState
+	rightDoor                model.DoorState
+	chBallCommand            chan model.BallCommand // Owned, written to.
+													// A time unit representing how much time (in some unspecified time
+													// unit) between each paint event.  Making this number smaller makes
+													// balls move faster.
+	pauseDuration            float32
 
-	// Window height and width are provided in "pixels".
-	// Velocity == "pixels traversed per timeStep".
+													// Window height and width are provided in "pixels".
+													// Velocity == "pixels traversed per timeStep".
 	pixelsToCrossDuringPause float32
 }
 
 func NewEngine(
-	chatty bool,
-	nm model.NetManager,
-	scn model.Screen,
+chatty bool,
+nm model.NetManager,
+scn model.Screen,
 ) *Engine {
 	if scn == nil {
 		log.Panic("Screen cannot be nil")
 	}
 	if nm == nil {
-		log.Panic("V23Manager cannot be nil")
+		log.Panic("NetManager cannot be nil")
 	}
 	return &Engine{
 		false, // isAlive
@@ -76,7 +77,7 @@ func NewEngine(
 		model.Closed, // right door
 		make(chan model.BallCommand),
 		200, // pauseDuration
-		20,  // pixelsToCrossDuringPause
+		20, // pixelsToCrossDuringPause
 	}
 }
 
@@ -100,7 +101,7 @@ func (gn *Engine) getReady(chEvent chan readyEvent) chan bool {
 
 		for {
 			select {
-			case <-time.After(5 * time.Second):
+			case <-time.After(8 * time.Second):
 				if gn.chatty {
 					log.Printf("Ready loop timed out.\n")
 				}
@@ -135,11 +136,22 @@ func (gn *Engine) getReady(chEvent chan readyEvent) chan bool {
 	return ch
 }
 
+func (gn *Engine) stopMeansReallyStop() bool {
+	return runtime.GOOS != "android"
+}
+
+func (gn *Engine) enterWaitState() (chWaiting chan readyEvent, chIsReady chan bool) {
+	chWaiting = make(chan readyEvent)
+	chIsReady = gn.getReady(chWaiting)
+	return
+}
+
 func (gn *Engine) Run(a app.App) {
 	if gn.chatty {
 		log.Println("Starting gn Run.")
+		log.Print("runtime.GOOS = ", runtime.GOOS)
+		log.Print("runtime.GOARCH = ", runtime.GOARCH)
 	}
-
 	// TODO(monopole): Send these into App somehow, so
 	// the select below can be collapse to just a switch
 	// on app events.
@@ -151,8 +163,7 @@ func (gn *Engine) Run(a app.App) {
 	var chQuit <-chan bool
 
 	holdCount := 0
-	chWaiting := make(chan readyEvent)
-	chIsReady := gn.getReady(chWaiting)
+	chWaiting, chIsReady := gn.enterWaitState()
 	var sz size.Event
 	for {
 		if false && gn.chatty {
@@ -162,35 +173,37 @@ func (gn *Engine) Run(a app.App) {
 		}
 		select {
 		case ready := <-chIsReady:
-			chIsReady = nil // Done with this channel.
 			log.Printf("Got ready signal = %v", ready)
-			if !ready {
+			if ready {
+				chWaiting, chIsReady = nil, nil
+				relay := gn.nm.GetRelay()
+				chMasterCommand = relay.ChMasterCommand()
+				chPauseDuration = relay.ChPauseDuration()
+				chGravity = relay.ChGravity()
+				chIncomingBall = relay.ChIncomingBall()
+				chQuit = relay.ChQuit()
+				gn.scn.Start()
+				if gn.chatty {
+					log.Printf("Started screen.")
+				}
+				gn.createBall()
+				gn.isAlive = true
+				if gn.chatty {
+					log.Printf("Seem to be alive now.")
+				}
+			} else {
 				if gn.chatty {
 					log.Printf("Unable to get ready - exiting.")
 				}
-				return
-			}
-			chWaiting = nil
-			relay := gn.nm.GetRelay()
-			chMasterCommand = relay.ChMasterCommand()
-			chPauseDuration = relay.ChPauseDuration()
-			chGravity = relay.ChGravity()
-			chIncomingBall = relay.ChIncomingBall()
-			chQuit = relay.ChQuit()
-			gn.scn.Start()
-			if gn.chatty {
-				log.Printf("Started screen.")
-			}
-			gn.createBall()
-			gn.isAlive = true
-			if gn.chatty {
-				log.Printf("Seem to be alive now.")
+				if gn.stopMeansReallyStop() {
+					return
+				}
+				chWaiting, chIsReady = gn.enterWaitState()
 			}
 		case mc := <-chMasterCommand:
 			switch mc.Name {
 			case "kick":
 				gn.kick()
-			case "freeze":
 				gn.freeze()
 			case "left":
 				gn.left()
@@ -205,7 +218,10 @@ func (gn *Engine) Run(a app.App) {
 			}
 		case <-chQuit:
 			gn.stop()
-			return
+			if gn.stopMeansReallyStop() {
+				return
+			}
+			chWaiting, chIsReady = gn.enterWaitState()
 		case pd := <-chPauseDuration:
 			gn.pauseDuration = pd
 		case g := <-chGravity:
@@ -222,10 +238,10 @@ func (gn *Engine) Run(a app.App) {
 				// Ball came in from right.
 				nx = gn.scn.Width()
 			}
-			// Assume Y component normalized before teleport.
+		// Assume Y component normalized before teleport.
 			ny := b.GetPos().Y * gn.scn.Height()
 			b.SetPos(nx, ny)
-			// TODO: Adjust velocity per refraction-like rules?
+		// TODO: Adjust velocity per refraction-like rules?
 			gn.balls = append(gn.balls, b)
 		case dc := <-gn.nm.ChDoorCommand():
 			gn.handleDoor(dc)
@@ -235,7 +251,7 @@ func (gn *Engine) Run(a app.App) {
 				switch e.Crosses(lifecycle.StageVisible) {
 				case lifecycle.CrossOn:
 					if chWaiting == nil {
-						log.Print("Lifecycle trouble")
+						log.Panic("Lifecycle trouble")
 						return
 					}
 					log.Print("Passing cycleOn")
@@ -243,7 +259,10 @@ func (gn *Engine) Run(a app.App) {
 					log.Print("Passed cycleOn")
 				case lifecycle.CrossOff:
 					gn.stop()
-					return
+					if gn.stopMeansReallyStop() {
+						return
+					}
+					chWaiting, chIsReady = gn.enterWaitState()
 				}
 			case paint.Event:
 				if gn.isAlive {
@@ -256,12 +275,12 @@ func (gn *Engine) Run(a app.App) {
 					log.Printf("Key event! %T = %v", e.Code, e.Code)
 				}
 				switch e.Code {
-				case key.CodeQ:
+				case key.CodeQ, key.CodeEscape:
 					gn.stop()
-					return
-				case key.CodeEscape:
-					gn.stop()
-					return
+					if gn.stopMeansReallyStop() {
+						return
+					}
+					chWaiting, chIsReady = gn.enterWaitState()
 				}
 			case touch.Event:
 				if gn.chatty {
@@ -277,7 +296,10 @@ func (gn *Engine) Run(a app.App) {
 							log.Printf("Touched shutdown spot.\n")
 						}
 						gn.stop()
-						return
+						if gn.stopMeansReallyStop() {
+							return
+						}
+						chWaiting, chIsReady = gn.enterWaitState()
 					}
 				case touch.TypeMove:
 					holdCount++
@@ -289,10 +311,10 @@ func (gn *Engine) Run(a app.App) {
 						// If they hold on too long, ignore it.
 						dx := float64(e.X - gn.beginX)
 						dy := float64(e.Y - gn.beginY)
-						mag := math.Sqrt(dx*dx + dy*dy)
+						mag := math.Sqrt(dx * dx + dy * dy)
 						if mag >= minDragLength {
-							ndx := float32(dx/mag) * gn.scn.Width() / gn.pauseDuration
-							ndy := float32(dy/mag) * gn.scn.Height() / gn.pauseDuration
+							ndx := float32(dx / mag) * gn.scn.Width() / gn.pauseDuration
+							ndy := float32(dy / mag) * gn.scn.Height() / gn.pauseDuration
 							b := model.NewBall(nil,
 								model.Vec{gn.beginX, gn.beginY},
 								model.Vec{ndx, ndy})
@@ -341,7 +363,6 @@ func (gn *Engine) String() string {
 }
 
 func (gn *Engine) stop() {
-	gn.scn.Clear()
 	if !gn.isAlive {
 		log.Println("Stop called on dead gn.")
 		return
@@ -351,6 +372,11 @@ func (gn *Engine) stop() {
 	}
 	gn.nm.NoNewBallsOrPeople()
 	gn.discardBalls()
+	if gn.chatty {
+		log.Println("Clearing and stopping screen.")
+	}
+	gn.scn.Clear()
+	gn.scn.Stop()
 	// Closing this channel sends a nil, which has to be handled on the
 	// other side - so don't bother to close(gn.chBallCommand)
 	if gn.chatty {
@@ -374,19 +400,19 @@ func (gn *Engine) kick() {
 	}
 	for _, b := range gn.balls {
 		//	b.SetVel(0, gn.minVelocity())
-		b.SetVel(0, gn.scn.Height()/gn.pauseDuration)
+		b.SetVel(0, gn.scn.Height() / gn.pauseDuration)
 	}
 }
 
 func (gn *Engine) left() {
 	for _, b := range gn.balls {
-		b.SetVel(-gn.scn.Width()/gn.pauseDuration, 0)
+		b.SetVel(-gn.scn.Width() / gn.pauseDuration, 0)
 	}
 }
 
 func (gn *Engine) right() {
 	for _, b := range gn.balls {
-		b.SetVel(gn.scn.Width()/gn.pauseDuration, 0)
+		b.SetVel(gn.scn.Width() / gn.pauseDuration, 0)
 	}
 }
 
@@ -400,7 +426,7 @@ func (gn *Engine) freeze() {
 }
 
 const (
-	two  = float64(2.0)
+	two = float64(2.0)
 	half = float64(0.5)
 )
 
@@ -415,7 +441,7 @@ func (gn *Engine) random() {
 	coefX := float64(gn.scn.Width() / gn.pauseDuration)
 	coefY := float64(gn.scn.Height() / gn.pauseDuration)
 	for _, b := range gn.balls {
-		b.SetVel(float32(coefX*randNorm()), float32(coefY*randNorm()))
+		b.SetVel(float32(coefX * randNorm()), float32(coefY * randNorm()))
 	}
 }
 
@@ -437,8 +463,8 @@ func (gn *Engine) moveBalls() {
 		dx := b.GetVel().X
 		dy := b.GetVel().Y + gn.gravity
 
-		nx := b.GetPos().X + dx*velX0
-		ny := b.GetPos().Y + dy*velY0
+		nx := b.GetPos().X + dx * velX0
+		ny := b.GetPos().Y + dy * velY0
 		if nx <= 0 {
 			// Ball hit left side of screen.
 			if gn.leftDoor == model.Open {
@@ -491,7 +517,7 @@ func (gn *Engine) throwBalls(discardPile []discardable) {
 		if gn.chatty {
 			log.Printf("  ball = %v\n", b)
 		}
-		gn.balls = append(gn.balls[:i], gn.balls[i+1:]...)
+		gn.balls = append(gn.balls[:i], gn.balls[i + 1:]...)
 		gn.throwOneBall(b, discard.d)
 	}
 }
@@ -501,7 +527,7 @@ func (gn *Engine) throwOneBall(b *model.Ball, direction model.Direction) {
 	// percentage.  Recipient converts it based on their own dimensions,
 	// so that if the ball left one tenth of the way up the screen, it
 	// enters the next screen at the same relative position.
-	b.SetPos(b.GetPos().X, b.GetPos().Y/gn.scn.Height())
+	b.SetPos(b.GetPos().X, b.GetPos().Y / gn.scn.Height())
 	gn.chBallCommand <- model.BallCommand{b, direction}
 }
 
@@ -637,13 +663,13 @@ func (gn *Engine) applyImpulse(impulse *model.Ball) {
 }
 
 func (gn *Engine) closestDsq(im model.Vec) (
-	smallest float32, target *model.Ball) {
+smallest float32, target *model.Ball) {
 	smallest = math.MaxFloat32
 	target = nil
 	for _, b := range gn.balls {
 		dx := im.X - b.GetPos().X
 		dy := im.Y - b.GetPos().Y
-		dsq := dx*dx + dy*dy
+		dsq := dx * dx + dy * dy
 		if dsq < smallest {
 			smallest = dsq
 			target = b
