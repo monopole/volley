@@ -37,6 +37,11 @@ import (
 	_ "v.io/x/ref/runtime/factories/generic"
 )
 
+const (
+	useFixedNs = true
+	theFixedNs = "192.168.8.106:23000"
+)
+
 type vPlayer struct {
 	p *model.Player
 	c ifc.GameServiceClientStub
@@ -101,6 +106,10 @@ func init() {
 }
 
 func DetermineNamespaceRoot() string {
+	if useFixedNs {
+		return theFixedNs
+	}
+
 	res, err := http.Get(config.TestDomain)
 	if err != nil {
 		log.Printf("Unable to Get %s", config.TestDomain)
