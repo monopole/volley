@@ -4,5 +4,5 @@
 // This package is generated from VDL. To regenerate:
 //
 //   go get v.io/x/ref/cmd/vdl
-//   VDLPATH=$GOPATH/src $GOPATH/bin/vdl generate github.com/monopole/volley/ifc
+//   VDLPATH=$GOPATH/src $GOPATH/bin/vdl --builtin_vdlroot generate github.com/monopole/volley/ifc
 package ifc
