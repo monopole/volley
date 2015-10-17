@@ -2,10 +2,10 @@ package engine
 
 import (
 	"fmt"
-	"runtime"
 	"github.com/monopole/volley/config"
 	"github.com/monopole/volley/ifc"
 	"github.com/monopole/volley/model"
+	"github.com/monopole/volley/screen"
 	"golang.org/x/mobile/app"
 	"golang.org/x/mobile/event/key"
 	"golang.org/x/mobile/event/lifecycle"
@@ -15,52 +15,49 @@ import (
 	"log"
 	"math"
 	"math/rand"
+	"runtime"
 	"time"
 )
 
 const (
-// Start with generous slop.
+	// Start with generous slop.
 	defaultMaxDistSqForImpulse = 5000
-	debugShowResizes = false
-	maxHoldCount = 30
-	magicButtonSideLength = 100
-	fuzzyZero = 0.1
-	minDragLength = 6
+	debugShowResizes           = false
+	maxHoldCount               = 30
+	magicButtonSideLength      = 100
+	fuzzyZero                  = 0.1
+	minDragLength              = 6
 )
 
 type Engine struct {
-	isAlive                  bool
-	maxDistSqForImpulse      float32
-	gravity                  float32
-	nm                       model.NetManager
-	scn                      model.Screen
-	chatty                   bool
-	balls                    []*model.Ball
-	touchX                   float32
-	touchY                   float32
-	beginX                   float32
-	beginY                   float32
-	leftDoor                 model.DoorState
-	rightDoor                model.DoorState
-	chBallCommand            chan model.BallCommand // Owned, written to.
-													// A time unit representing how much time (in some unspecified time
-													// unit) between each paint event.  Making this number smaller makes
-													// balls move faster.
-	pauseDuration            float32
+	isAlive             bool
+	maxDistSqForImpulse float32
+	gravity             float32
+	nm                  model.NetManager
+	scn                 model.Screen
+	chatty              bool
+	balls               []*model.Ball
+	touchX              float32
+	touchY              float32
+	beginX              float32
+	beginY              float32
+	leftDoor            model.DoorState
+	rightDoor           model.DoorState
+	chBallCommand       chan model.BallCommand // Owned, written to.
+	// A time unit representing how much time (in some unspecified time
+	// unit) between each paint event.  Making this number smaller makes
+	// balls move faster.
+	pauseDuration float32
 
-													// Window height and width are provided in "pixels".
-													// Velocity == "pixels traversed per timeStep".
+	// Window height and width are provided in "pixels".
+	// Velocity == "pixels traversed per timeStep".
 	pixelsToCrossDuringPause float32
 }
 
 func NewEngine(
-chatty bool,
-nm model.NetManager,
-scn model.Screen,
+	chatty bool,
+	nm model.NetManager,
 ) *Engine {
-	if scn == nil {
-		log.Panic("Screen cannot be nil")
-	}
 	if nm == nil {
 		log.Panic("NetManager cannot be nil")
 	}
@@ -69,7 +66,7 @@ scn model.Screen,
 		defaultMaxDistSqForImpulse,
 		0, // gravity
 		nm,
-		scn,
+		screen.NewScreen(),
 		chatty,
 		[]*model.Ball{},
 		0, 0, 0, 0,
@@ -77,7 +74,7 @@ scn model.Screen,
 		model.Closed, // right door
 		make(chan model.BallCommand),
 		200, // pauseDuration
-		20, // pixelsToCrossDuringPause
+		20,  // pixelsToCrossDuringPause
 	}
 }
 
@@ -191,6 +188,7 @@ func (gn *Engine) Run(a app.App) {
 				if gn.chatty {
 					log.Printf("Seem to be alive now.")
 				}
+				a.Send(paint.Event{})
 			} else {
 				if gn.chatty {
 					log.Printf("Unable to get ready - exiting.")
@@ -238,15 +236,15 @@ func (gn *Engine) Run(a app.App) {
 				// Ball came in from right.
 				nx = gn.scn.Width()
 			}
-		// Assume Y component normalized before teleport.
+			// Assume Y component normalized before teleport.
 			ny := b.GetPos().Y * gn.scn.Height()
 			b.SetPos(nx, ny)
-		// TODO: Adjust velocity per refraction-like rules?
+			// TODO: Adjust velocity per refraction-like rules?
 			gn.balls = append(gn.balls, b)
 		case dc := <-gn.nm.ChDoorCommand():
 			gn.handleDoor(dc)
 		case event := <-a.Events():
-			switch e := app.Filter(event).(type) {
+			switch e := a.Filter(event).(type) {
 			case lifecycle.Event:
 				switch e.Crosses(lifecycle.StageVisible) {
 				case lifecycle.CrossOn:
@@ -254,10 +252,14 @@ func (gn *Engine) Run(a app.App) {
 						log.Panic("Lifecycle trouble")
 						return
 					}
+					if err := gn.scn.SetDrawContext(e.DrawContext); err != nil {
+						log.Panic(err)
+					}
 					log.Print("Passing cycleOn")
 					chWaiting <- readyCycleOn
 					log.Print("Passed cycleOn")
 				case lifecycle.CrossOff:
+					gn.scn.Stop()
 					gn.stop()
 					if gn.stopMeansReallyStop() {
 						return
@@ -268,8 +270,9 @@ func (gn *Engine) Run(a app.App) {
 				if gn.isAlive {
 					gn.moveBalls()
 					gn.scn.Paint(gn.balls)
+					a.Publish()
 				}
-				a.EndPaint(e)
+				a.Send(paint.Event{})
 			case key.Event: // Aspirationally use keys
 				if gn.chatty {
 					log.Printf("Key event! %T = %v", e.Code, e.Code)
@@ -311,10 +314,10 @@ func (gn *Engine) Run(a app.App) {
 						// If they hold on too long, ignore it.
 						dx := float64(e.X - gn.beginX)
 						dy := float64(e.Y - gn.beginY)
-						mag := math.Sqrt(dx * dx + dy * dy)
+						mag := math.Sqrt(dx*dx + dy*dy)
 						if mag >= minDragLength {
-							ndx := float32(dx / mag) * gn.scn.Width() / gn.pauseDuration
-							ndy := float32(dy / mag) * gn.scn.Height() / gn.pauseDuration
+							ndx := float32(dx/mag) * gn.scn.Width() / gn.pauseDuration
+							ndy := float32(dy/mag) * gn.scn.Height() / gn.pauseDuration
 							b := model.NewBall(nil,
 								model.Vec{gn.beginX, gn.beginY},
 								model.Vec{ndx, ndy})
@@ -400,19 +403,19 @@ func (gn *Engine) kick() {
 	}
 	for _, b := range gn.balls {
 		//	b.SetVel(0, gn.minVelocity())
-		b.SetVel(0, gn.scn.Height() / gn.pauseDuration)
+		b.SetVel(0, gn.scn.Height()/gn.pauseDuration)
 	}
 }
 
 func (gn *Engine) left() {
 	for _, b := range gn.balls {
-		b.SetVel(-gn.scn.Width() / gn.pauseDuration, 0)
+		b.SetVel(-gn.scn.Width()/gn.pauseDuration, 0)
 	}
 }
 
 func (gn *Engine) right() {
 	for _, b := range gn.balls {
-		b.SetVel(gn.scn.Width() / gn.pauseDuration, 0)
+		b.SetVel(gn.scn.Width()/gn.pauseDuration, 0)
 	}
 }
 
@@ -426,7 +429,7 @@ func (gn *Engine) freeze() {
 }
 
 const (
-	two = float64(2.0)
+	two  = float64(2.0)
 	half = float64(0.5)
 )
 
@@ -441,7 +444,7 @@ func (gn *Engine) random() {
 	coefX := float64(gn.scn.Width() / gn.pauseDuration)
 	coefY := float64(gn.scn.Height() / gn.pauseDuration)
 	for _, b := range gn.balls {
-		b.SetVel(float32(coefX * randNorm()), float32(coefY * randNorm()))
+		b.SetVel(float32(coefX*randNorm()), float32(coefY*randNorm()))
 	}
 }
 
@@ -463,8 +466,8 @@ func (gn *Engine) moveBalls() {
 		dx := b.GetVel().X
 		dy := b.GetVel().Y + gn.gravity
 
-		nx := b.GetPos().X + dx * velX0
-		ny := b.GetPos().Y + dy * velY0
+		nx := b.GetPos().X + dx*velX0
+		ny := b.GetPos().Y + dy*velY0
 		if nx <= 0 {
 			// Ball hit left side of screen.
 			if gn.leftDoor == model.Open {
@@ -517,7 +520,7 @@ func (gn *Engine) throwBalls(discardPile []discardable) {
 		if gn.chatty {
 			log.Printf("  ball = %v\n", b)
 		}
-		gn.balls = append(gn.balls[:i], gn.balls[i + 1:]...)
+		gn.balls = append(gn.balls[:i], gn.balls[i+1:]...)
 		gn.throwOneBall(b, discard.d)
 	}
 }
@@ -527,7 +530,7 @@ func (gn *Engine) throwOneBall(b *model.Ball, direction model.Direction) {
 	// percentage.  Recipient converts it based on their own dimensions,
 	// so that if the ball left one tenth of the way up the screen, it
 	// enters the next screen at the same relative position.
-	b.SetPos(b.GetPos().X, b.GetPos().Y / gn.scn.Height())
+	b.SetPos(b.GetPos().X, b.GetPos().Y/gn.scn.Height())
 	gn.chBallCommand <- model.BallCommand{b, direction}
 }
 
@@ -663,13 +666,13 @@ func (gn *Engine) applyImpulse(impulse *model.Ball) {
 }
 
 func (gn *Engine) closestDsq(im model.Vec) (
-smallest float32, target *model.Ball) {
+	smallest float32, target *model.Ball) {
 	smallest = math.MaxFloat32
 	target = nil
 	for _, b := range gn.balls {
 		dx := im.X - b.GetPos().X
 		dy := im.Y - b.GetPos().Y
-		dsq := dx * dx + dy * dy
+		dsq := dx*dx + dy*dy
 		if dsq < smallest {
 			smallest = dsq
 			target = b

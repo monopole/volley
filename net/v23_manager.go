@@ -34,12 +34,13 @@ import (
 	"v.io/v23/naming"
 	"v.io/v23/options"
 	"v.io/v23/rpc"
+	"v.io/v23/security"
 	_ "v.io/x/ref/runtime/factories/generic"
 )
 
 const (
 	useFixedNs = true
-	theFixedNs = "192.168.8.106:23000"
+	theFixedNs = "192.168.86.254:8101"
 )
 
 type vPlayer struct {
@@ -85,7 +86,7 @@ func NewV23Manager(
 		model.Closed, // right door
 		rootName,
 		namespaceRoot,
-		options.SkipServerEndpointAuthorization{},
+		options.ServerAuthorizer{security.AllowEveryone()},
 		nil, // relay
 		nil, // myself
 		[]*vPlayer{},
@@ -212,18 +213,18 @@ func (nm *V23Manager) getReadyToRun(ch chan bool) {
 		log.Printf("I am player %v\n", nm.myself)
 	}
 
-	s := MakeServer(nm.ctx)
 	myName := nm.serverName(nm.Me().Id())
 	if nm.chatty {
 		log.Printf("Calling myself %s\n", myName)
 	}
-
-	err := s.Serve(myName, ifc.GameServiceServer(nm.relay), MakeAuthorizer())
+	ctx, s, err := v23.WithNewServer(nm.ctx, myName, ifc.GameServiceServer(nm.relay), MakeAuthorizer())
 	if err != nil {
-		log.Panic("Error serving relay: ", err)
+		log.Panic("Error creating server:", err)
 		ch <- false
 		return
 	}
+	saveEndpointToFile(s)
+	nm.ctx = ctx
 	nm.isReady = true
 	ch <- true
 }
