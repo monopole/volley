@@ -1,10 +1,11 @@
 # volley
 
-Go + mobile + GL + [v23](https://v.io).
+- Go + mobile + GL + [v23](https://v.io).
+- [Demo video](https://youtu.be/dk-5BkO_P14).
+- To try v23, sign up [here](https://goo.gl/ETo8Mt).
 
-[Demo video](https://youtu.be/dk-5BkO_P14).
+[![Build Status](https://secure.travis-ci.org/monopole/volley.png)](http://travis-ci.org/monopole/volley)
 
-To try v23, sign up [here](https://goo.gl/ETo8Mt).
 
 ## Install prerequisites
 
@@ -335,7 +336,7 @@ seeing the mounttable, or it simply won't work.__
 It the app finds the mounttable, it will join the "game"
 (or start a new one).
 
-### ioS
+### iOS
 
 ```
 gomobile init
