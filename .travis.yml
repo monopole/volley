@@ -4,5 +4,4 @@ go:
   - 1.5
 
 before_script:
-  go get golang.org/x/mobile/cmd/gomobile
-  $GOPATH/bin/gomobile init
+        - sudo apt-get install -qq libgles2-mesa-dev
