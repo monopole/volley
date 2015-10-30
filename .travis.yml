@@ -1,0 +1,8 @@
+language: go
+
+before_install:
+  - sudo apt-get update -qq
+  - sudo apt-get install -qq libgles2-mesa-dev
+
+go:
+  - 1.5
