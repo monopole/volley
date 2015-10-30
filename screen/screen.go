@@ -2,6 +2,7 @@ package screen
 
 import (
 	"encoding/binary"
+	"fmt"
 	"github.com/monopole/volley/model"
 	"golang.org/x/mobile/exp/f32"
 	"golang.org/x/mobile/exp/gl/glutil"
@@ -57,6 +58,7 @@ var playerColors = []Color{
 }
 
 type Screen struct {
+	glctx    gl.Context
 	buf      gl.Buffer
 	program  gl.Program
 	position gl.Attrib
@@ -91,27 +93,36 @@ func NewScreen() *Screen {
 	return &Screen{}
 }
 
+func (s *Screen) SetDrawContext(ctx interface{}) error {
+	glctx, ok := ctx.(gl.Context)
+	if !ok {
+		return fmt.Errorf("got %T want gl.Context as DrawContext", ctx)
+	}
+	s.glctx = glctx
+	return nil
+}
+
 func (s *Screen) Start() {
 	for i, c := range playerColors {
 		playerColors[i] = Color{c.R / 255.0, c.G / 255.0, c.B / 255.0}
 	}
 
-	s.buf = gl.CreateBuffer()
-	gl.BindBuffer(gl.ARRAY_BUFFER, s.buf)
+	s.buf = s.glctx.CreateBuffer()
+	s.glctx.BindBuffer(gl.ARRAY_BUFFER, s.buf)
 	triangleData = makeTriangleData()
 
-	gl.BufferData(gl.ARRAY_BUFFER, triangleData, gl.STATIC_DRAW)
+	s.glctx.BufferData(gl.ARRAY_BUFFER, triangleData, gl.STATIC_DRAW)
 
 	var err error
-	s.program, err = glutil.CreateProgram(vertexShader, fragmentShader)
+	s.program, err = glutil.CreateProgram(s.glctx, vertexShader, fragmentShader)
 	if err != nil {
 		log.Printf("Error in screen.Start: %v", err)
 		return
 	}
-	s.position = gl.GetAttribLocation(s.program, "jrPosition")
-	s.color = gl.GetUniformLocation(s.program, "jrColor")
-	s.offset = gl.GetUniformLocation(s.program, "jrOffset")
-	gl.UseProgram(s.program)
+	s.position = s.glctx.GetAttribLocation(s.program, "jrPosition")
+	s.color = s.glctx.GetUniformLocation(s.program, "jrColor")
+	s.offset = s.glctx.GetUniformLocation(s.program, "jrOffset")
+	s.glctx.UseProgram(s.program)
 }
 
 func (s *Screen) ReSize(width float32, height float32) {
@@ -128,25 +139,25 @@ func (s *Screen) Height() float32 {
 }
 
 func (s *Screen) Clear() {
-	gl.ClearColor(bgRed, bgGreen, bgBlue, opaque)
-	gl.Clear(gl.COLOR_BUFFER_BIT)
+	s.glctx.ClearColor(bgRed, bgGreen, bgBlue, opaque)
+	s.glctx.Clear(gl.COLOR_BUFFER_BIT)
 }
 
 func (s *Screen) Paint(balls []*model.Ball) {
 	s.Clear()
-	gl.EnableVertexAttribArray(s.position)
-	gl.VertexAttribPointer(s.position, coordsPerVertex, gl.FLOAT, false, 0, 0)
+	s.glctx.EnableVertexAttribArray(s.position)
+	s.glctx.VertexAttribPointer(s.position, coordsPerVertex, gl.FLOAT, false, 0, 0)
 	for _, b := range balls {
 		c := playerColors[b.Owner().Id()%len(playerColors)]
-		gl.Uniform4f(s.color, c.R, c.G, c.B, opaque)
-		gl.Uniform2f(s.offset, b.GetPos().X/s.width, b.GetPos().Y/s.height)
-		gl.DrawArrays(gl.TRIANGLES, 0, vertexCount)
+		s.glctx.Uniform4f(s.color, c.R, c.G, c.B, opaque)
+		s.glctx.Uniform2f(s.offset, b.GetPos().X/s.width, b.GetPos().Y/s.height)
+		s.glctx.DrawArrays(gl.TRIANGLES, 0, vertexCount)
 	}
-	gl.DisableVertexAttribArray(s.position)
+	s.glctx.DisableVertexAttribArray(s.position)
 	// debug.DrawFPS(c)
 }
 
 func (s *Screen) Stop() {
-	gl.DeleteProgram(s.program)
-	gl.DeleteBuffer(s.buf)
+	s.glctx.DeleteProgram(s.program)
+	s.glctx.DeleteBuffer(s.buf)
 }
